@@ -15,7 +15,6 @@ export const authOptions = {
             role
             department_id
             gender
-            college
           }
         }`;
 

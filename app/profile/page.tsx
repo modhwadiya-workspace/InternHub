@@ -97,7 +97,7 @@ export default function ProfilePage() {
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  required
+                  
                 />
               </div>
 
@@ -119,7 +119,7 @@ export default function ProfilePage() {
                   value={formData.gender}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  required
+                  
                 >
                   <option value="male">Male</option>
                   <option value="female">Female</option>
@@ -134,7 +134,7 @@ export default function ProfilePage() {
                   value={formData.college}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  required
+                  
                 />
               </div>
             </div>

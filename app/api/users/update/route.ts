@@ -12,9 +12,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, name, email, department_id, college, gender } = body;
+    const { id, name, email, department_id, college, gender, contact_number, joining_date, status, role } = body;
 
-    const validation = validateUserUpdate({ name, email, college, role: college || gender ? "intern" : "manager" });
+    const validation = validateUserUpdate({ name, email, college, role, contact_number });
     if (!validation.valid) {
       return NextResponse.json({ error: validation.message }, { status: 400 });
     }
@@ -24,33 +24,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
-    // Security Check: Interns can ONLY update their own data.
+    const checkQuery = `query { users_by_pk(id: "${userId}") { role department_id } }`;
+    const checkRes = await gql(checkQuery);
+    const targetUser = checkRes.data?.users_by_pk;
+
+    if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // RBAC Permissions Check
     if (session.user.role === "intern") {
-      const sessionId = String(session.user.id);
-      if (!session.user.id || sessionId !== userId) {
+      if (String(session.user.id) !== userId) {
         return NextResponse.json({ error: "Forbidden: Cannot update other users" }, { status: 403 });
       }
-    }
-
-    // Check manager permissions (Manager can only update interns in their department)
-    if (session.user.role === "manager") {
-      const checkQuery = `query { users_by_pk(id: "${userId}") { role department_id } }`;
-      const checkRes = await gql(checkQuery);
-      const targetUser = checkRes.data?.users_by_pk;
-
-      if (!targetUser || targetUser.role !== "intern" || targetUser.department_id !== session.user.department_id) {
+    } else if (session.user.role === "manager") {
+      if (targetUser.role !== "intern" || targetUser.department_id !== session.user.department_id) {
         return NextResponse.json({ error: "Forbidden: Cannot update this user" }, { status: 403 });
       }
     }
 
-    const mutation = `mutation ($id: uuid!, $name: String!, $email: String, $department_id: Int, $college: String, $gender: String) {
-      update_users_by_pk(pk_columns: {id: $id}, _set: {name: $name, email: $email, department_id: $department_id, college: $college, gender: $gender}) {
+    const mutation = `mutation ($id: uuid!, $name: String!, $email: String, $department_id: Int, $gender: String, $contact_number: String) {
+      update_users_by_pk(pk_columns: {id: $id}, _set: {name: $name, email: $email, department_id: $department_id, gender: $gender, contact_number: $contact_number}) {
         id
+        role
         name
-        email
-        department_id
-        college
-        gender
       }
     }`;
 
@@ -58,15 +53,45 @@ export async function POST(req: NextRequest) {
       id: userId,
       name,
       email: email ?? null,
-      department_id: department_id != null ? Number(department_id) : null,
-      college: college ?? null,
+      department_id: department_id ? Number(department_id) : null,
       gender: gender ?? null,
+      contact_number: contact_number ?? null,
     };
 
     const res = await gql(mutation, variables);
 
     if (res.errors) {
       return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    }
+
+    if (targetUser.role === "intern") {
+      let internSet: any = { college: college ?? null };
+      
+      let customSets = [`collage: $collage`, `contact_number: $contact_number`];
+      let variablesPayload: any = {
+        user_id: userId,
+        collage: college ?? null,
+        contact_number: contact_number ?? null,
+      };
+
+      if (session.user.role === "admin" || session.user.role === "manager") {
+        if (joining_date) {
+          customSets.push(`joining_date: $joining_date`);
+          variablesPayload.joining_date = joining_date;
+        }
+        if (status) {
+          customSets.push(`status: $status`);
+          variablesPayload.status = status;
+        }
+      }
+
+      const internMutation = `mutation ($user_id: uuid!, $collage: String, $contact_number: String ${variablesPayload.joining_date ? ', $joining_date: date' : ''} ${variablesPayload.status ? ', $status: String' : ''}) {
+        update_interns(where: {user_id: {_eq: $user_id}}, _set: {${customSets.join(', ')}}) {
+          affected_rows
+        }
+      }`;
+
+      await gql(internMutation, variablesPayload);
     }
 
     return NextResponse.json({ success: true, user: res.data?.update_users_by_pk });

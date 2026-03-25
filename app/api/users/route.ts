@@ -45,18 +45,36 @@ export async function GET(req: NextRequest) {
         email
         role
         gender
-        college
+        contact_number
         department_id
+      }
+      interns {
+        user_id
+        college: collage
+        joining_date
+        status
       }
     }`;
 
     const res = await gql(query);
 
     if (res.errors) {
+      console.error("GET /api/users GraphQL Errors:", res.errors);
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 
-    return NextResponse.json({ users: res.data?.users || [] });
+    const fetchedUsers = res.data?.users || [];
+    const fetchedInterns = res.data?.interns || [];
+
+    const mappedUsers = fetchedUsers.map((user: any) => {
+      if (user.role === "intern") {
+        const internData = fetchedInterns.filter((i: any) => i.user_id === user.id);
+        return { ...user, interns: internData };
+      }
+      return user;
+    });
+
+    return NextResponse.json({ users: mappedUsers });
   } catch (err) {
     console.error("GET /api/users Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

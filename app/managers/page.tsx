@@ -20,6 +20,8 @@ export default function ManagersPage() {
     email: "",
     password: "",
     department_id: "",
+    gender: "male",
+    contact_number: "",
   });
 
   const [editModal, setEditModal] = useState(false);
@@ -28,6 +30,8 @@ export default function ManagersPage() {
     name: "",
     email: "",
     department_id: "",
+    gender: "male",
+    contact_number: "",
   });
 
   const openEditModal = (manager: any) => {
@@ -35,7 +39,9 @@ export default function ManagersPage() {
       id: manager.id,
       name: manager.name,
       email: manager.email,
-      department_id: manager.department_id.toString(),
+      department_id: manager.department_id,
+      gender: manager.gender || "male",
+      contact_number: manager.contact_number || "",
     });
     setEditModal(true);
   };
@@ -60,6 +66,8 @@ export default function ManagersPage() {
           name: editData.name,
           email: editData.email,
           department_id: parseInt(editData.department_id),
+          gender: editData.gender,
+          contact_number: editData.contact_number,
         }),
       });
 
@@ -153,7 +161,7 @@ export default function ManagersPage() {
 
     if (res.ok) {
       setShowModal(false);
-      setFormData({ name: "", email: "", password: "", department_id: "" });
+      setFormData({ name: "", email: "", password: "", department_id: "", gender: "male", contact_number: "" });
       fetchManagers(); // refresh list
     } else {
       alert(data.error || "Error creating manager");
@@ -184,6 +192,8 @@ export default function ManagersPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs">Name</th>
               <th className="px-6 py-3 text-left text-xs">Email</th>
+              <th className="px-6 py-3 text-left text-xs">Gender</th>
+              <th className="px-6 py-3 text-left text-xs">Contact</th>
               <th className="px-6 py-3 text-left text-xs">Department</th>
               <th className="px-6 py-3 text-right text-xs">Actions</th>
             </tr>
@@ -199,6 +209,8 @@ export default function ManagersPage() {
                 <tr key={m.id}>
                   <td className="px-6 py-4">{m.name}</td>
                   <td className="px-6 py-4">{m.email}</td>
+                  <td className="px-6 py-4 capitalize">{m.gender || "N/A"}</td>
+                  <td className="px-6 py-4">{m.contact_number || "N/A"}</td>
                   <td className="px-6 py-4">
                     {departments.find(d => d.id === m.department_id)?.name || "N/A"}
                   </td>
@@ -253,13 +265,36 @@ export default function ManagersPage() {
               />
 
               <input
-                
                 name="password"
                 type="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full border p-2 rounded"
+                
+              />
+
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="w-full border p-2 rounded"
+                
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+
+              <input
+                name="contact_number"
+                type="tel"
+                placeholder="Contact Number (10 digits)"
+                value={formData.contact_number}
+                onChange={handleChange}
+                className="w-full border p-2 rounded"
+                minLength={10}
+                maxLength={10}
+                
               />
 
               <select
@@ -306,7 +341,7 @@ export default function ManagersPage() {
             <form onSubmit={updateManager} className="space-y-3">
 
               <input
-                required
+                
                 name="name"
                 value={editData.name}
                 onChange={(e) => setEditData({ ...editData, name: e.target.value })}
@@ -314,7 +349,7 @@ export default function ManagersPage() {
               />
 
               <input
-                required
+                
                 type="email"
                 name="email"
                 value={editData.email}
@@ -323,7 +358,29 @@ export default function ManagersPage() {
               />
 
               <select
-                required
+                name="gender"
+                value={editData.gender}
+                onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
+                className="w-full border p-2 rounded"
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+
+              <input
+                
+                type="tel"
+                name="contact_number"
+                value={editData.contact_number}
+                onChange={(e) => setEditData({ ...editData, contact_number: e.target.value })}
+                placeholder="Contact Number (10 digits)"
+                className="w-full border p-2 rounded"
+                minLength={10}
+                maxLength={10}
+              />
+
+              <select
+                
                 value={editData.department_id}
                 onChange={(e) => setEditData({ ...editData, department_id: e.target.value })}
                 className="w-full border p-2 rounded"

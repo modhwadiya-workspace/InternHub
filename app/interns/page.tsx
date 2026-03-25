@@ -69,6 +69,17 @@ export default function UsersPage() {
     }
   };
 
+  const handleEditClick = (user: any) => {
+    const internData = user.interns?.[0] || {};
+    setEditingUser({
+      ...user,
+      college: internData.college || "",
+      joining_date: internData.joining_date || "",
+      status: internData.status || "active",
+      contact_number: user.contact_number || "",
+    });
+  };
+
   const deleteUser = async (id: number) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
@@ -106,9 +117,13 @@ export default function UsersPage() {
           id: editingUser.id,
           name: editingUser.name,
           email: editingUser.email,
-          department_id: Number(editingUser.department_id),
+          contact_number: editingUser.contact_number,
+          department_id: editingUser.department_id,
           college: editingUser.college,
           gender: editingUser.gender,
+          joining_date: editingUser.joining_date,
+          status: editingUser.status,
+          role: "intern",
         }),
       });
 
@@ -116,6 +131,40 @@ export default function UsersPage() {
       fetchUsers(); // refresh
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleStatusChange = async (user: any, newStatus: string) => {
+    const originalUsers = [...users];
+    setUsers(users.map(u => u.id === user.id ? {
+        ...u, interns: [{ ...(u.interns?.[0] || {}), status: newStatus }]
+    } : u));
+
+    try {
+      const res = await fetch("/api/users/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          contact_number: user.contact_number,
+          department_id: user.department_id,
+          college: user.interns?.[0]?.college,
+          gender: user.gender,
+          joining_date: user.interns?.[0]?.joining_date,
+          status: newStatus,
+          role: "intern",
+        }),
+      });
+      if (!res.ok) {
+         setUsers(originalUsers);
+         alert("Failed to update status");
+      }
+    } catch (err) {
+      console.error(err);
+      setUsers(originalUsers);
+      alert("Error updating status");
     }
   };
 
@@ -179,11 +228,12 @@ export default function UsersPage() {
             <thead className="bg-slate-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Gender</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Department</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Details</th>
-                {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th> */}
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">College</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joining Date</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                 <th scope="col" className="font-medium text-slate-500 relative px-6 py-3">
                   <span >Actions</span>
                 </th>
@@ -200,24 +250,20 @@ export default function UsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-slate-900">{user.name}</div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 capitalize">{user.gender || "N/A"}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.contact_number || "N/A"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.interns?.[0]?.college || "N/A"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.interns?.[0]?.joining_date || "N/A"}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : user.role === 'manager' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {departments.find(d => d.id === user.department_id)?.name || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {user.role === 'intern' ? (
-                        <div className="text-xs">
-                          <div><strong>College:</strong> {user.college || "N/A"}</div>
-                          <div><strong>Gender:</strong> {user.gender || "N/A"}</div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
+                      <select 
+                        value={user.interns?.[0]?.status || 'active'} 
+                        onChange={(e) => handleStatusChange(user, e.target.value)}
+                        className={`text-xs font-semibold rounded-full px-2 py-1 outline-none cursor-pointer border-none bg-transparent ${user.interns?.[0]?.status === 'inactive' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}
+                      >
+                         <option value="active" className="text-slate-800 bg-white">Active</option>
+                         <option value="inactive" className="text-slate-800 bg-white">Inactive</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -227,7 +273,7 @@ export default function UsersPage() {
                         Delete
                       </button>
                       <button
-                        onClick={() => setEditingUser(user)}
+                        onClick={() => handleEditClick(user)}
                         className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors ml-2"
                       >
                         Edit
@@ -270,6 +316,19 @@ export default function UsersPage() {
                   setEditingUser({ ...editingUser, email: e.target.value })
                 }
                 className="w-full mt-1 border px-3 py-2 rounded-lg"
+              />
+            </div>
+
+            {/* Contact Number */}
+            <div>
+              <label className="text-sm text-slate-600 font-medium">Contact Number</label>
+              <input
+                value={editingUser.contact_number || ""}
+                onChange={(e) =>
+                  setEditingUser({ ...editingUser, contact_number: e.target.value })
+                }
+                className="w-full mt-1 border px-3 py-2 rounded-lg"
+                minLength={10} maxLength={10}
               />
             </div>
 
@@ -318,6 +377,34 @@ export default function UsersPage() {
               >
                 <option value="male">Male</option>
                 <option value="female">Female</option>
+              </select>
+            </div>
+
+            {/* Joining Date */}
+            <div>
+              <label className="text-sm text-slate-600 font-medium">Joining Date</label>
+              <input
+                type="date"
+                value={editingUser.joining_date || ""}
+                onChange={(e) =>
+                  setEditingUser({ ...editingUser, joining_date: e.target.value })
+                }
+                className="w-full mt-1 border px-3 py-2 rounded-lg"
+              />
+            </div>
+            
+            {/* Status */}
+            <div>
+              <label className="text-sm text-slate-600 font-medium">Status</label>
+              <select
+                value={editingUser.status || "active"}
+                onChange={(e) =>
+                  setEditingUser({ ...editingUser, status: e.target.value })
+                }
+                className="w-full mt-1 border px-3 py-2 rounded-lg bg-white"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 

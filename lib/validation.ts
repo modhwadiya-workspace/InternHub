@@ -20,17 +20,22 @@ export function isValidDepartmentName(name: string | undefined | null): boolean 
     return name.trim().length >= 2;
 }
 
+export function isValidContactNumber(num: string | undefined | null): boolean {
+    if (!num) return false;
+    return /^\d{10}$/.test(num.trim());
+}
+
 export function validateUserRegistration(data: any): { valid: boolean; message?: string } {
     if (!isValidName(data.name)) return { valid: false, message: "Name must be at least 2 characters long." };
     if (!isValidEmail(data.email)) return { valid: false, message: "Invalid email format." };
     if (!isValidPassword(data.password)) return { valid: false, message: "Password must be at least 6 characters long." };
     
-    // Check college if intern
-    if (data.role === "intern") {
-        if (!data.college || data.college.trim().length < 2) {
-            return { valid: false, message: "College/University name must be at least 2 characters long." };
-        }
+    if (!isValidContactNumber(data.contact_number)) return { valid: false, message: "Contact number must be exactly 10 digits." };
+
+    if (data.role === "manager") {
+        if (!data.gender) return { valid: false, message: "Gender is required for managers." };
     }
+
     return { valid: true };
 }
 
@@ -38,11 +43,10 @@ export function validateUserUpdate(data: any): { valid: boolean; message?: strin
     if (!isValidName(data.name)) return { valid: false, message: "Name must be at least 2 characters long." };
     if (!isValidEmail(data.email)) return { valid: false, message: "Invalid email format." };
     
-    // Check college if intern UPDATE
-    if (data.role === "intern") {
-        if (!data.college || data.college.trim().length < 2) {
-            return { valid: false, message: "College/University name must be at least 2 characters long." };
-        }
+    if (!isValidContactNumber(data.contact_number)) return { valid: false, message: "Contact number must be exactly 10 digits." };
+
+    if (data.role === "manager") {
+        if (!data.gender) return { valid: false, message: "Gender is required for managers." };
     }
     return { valid: true };
 }

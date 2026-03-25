@@ -6,6 +6,12 @@ const query = `
         name
       }
     }
+    interns_type: __type(name: "interns") {
+      name
+      fields {
+        name
+      }
+    }
   }
 `;
 
@@ -21,5 +27,6 @@ fetch("http://localhost:8080/v1/graphql", {
   .then((data) => {
     const fields = data.data;
     console.log("USERS:", fields.users_type?.fields?.map(f => f.name).join(", "));
+    console.log("INTERNS:", fields.interns_type?.fields?.map(f => f.name).join(", "));
   })
   .catch((err) => console.error(err));

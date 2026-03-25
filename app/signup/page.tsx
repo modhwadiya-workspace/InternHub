@@ -19,6 +19,7 @@ export default function Signup() {
     department_id: "",
     gender: "male",
     college: "",
+    contact_number: "",
   });
 
   useEffect(() => {
@@ -63,8 +64,9 @@ export default function Signup() {
         password: formData.password,
         role: role,
         department_id: parseInt(formData.department_id),
-        gender: role === "intern" ? formData.gender : null,
+        gender: formData.gender, // gender is required globally for intern and manager now
         college: role === "intern" ? formData.college : null,
+        contact_number: formData.contact_number,
       };
 
       const res = await fetch("/api/signup", {
@@ -119,6 +121,27 @@ export default function Signup() {
             <input  name="name" type="text" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="John Doe" />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+              <select  name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+              <input  name="contact_number" type="tel" value={formData.contact_number} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="1234567890" maxLength={10} minLength={10} />
+            </div>
+          </div>
+
+          {role === "intern" && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">College/University</label>
+              <input  name="college" type="text" value={formData.college} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="State University" />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>
             <select  name="department_id" value={formData.department_id} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
@@ -128,22 +151,6 @@ export default function Signup() {
               ))}
             </select>
           </div>
-
-          {role === "intern" && (
-            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-                <select  name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">College/University</label>
-                <input  name="college" type="text" value={formData.college} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="State University" />
-              </div>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

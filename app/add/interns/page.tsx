@@ -21,6 +21,8 @@ function page() {
         department_id: "",
         gender: "male",
         college: "",
+        contact_number: "",
+        joining_date: new Date().toISOString().split('T')[0],
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -64,6 +66,8 @@ function page() {
                 department_id: session?.user?.role === "manager" ? session?.user?.department_id : parseInt(formData.department_id),
                 gender: role === "intern" ? formData.gender : null,
                 college: role === "intern" ? formData.college : null,
+                contact_number: formData.contact_number,
+                joining_date: role === "intern" ? formData.joining_date : null,
             };
 
             const validation = validateUserRegistration(bodyData);
@@ -125,8 +129,16 @@ function page() {
                         </select>
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                        <input  name="contact_number" type="tel" value={formData.contact_number} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="1234567890" minLength={10} maxLength={10} />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">College/University</label>
                         <input  name="college" type="text" value={formData.college} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="State University" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Joining Date</label>
+                        <input  name="joining_date" type="date" value={formData.joining_date} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
                     </div>
                 </div>
                 
