@@ -8,6 +8,8 @@ declare module "next-auth" {
       department_id?: number | null;
       college?: string | null;
       gender?: string | null;
+      contact_number?: string | null;
+      joining_date?: string | null;
     } & DefaultSession["user"];
   }
 }

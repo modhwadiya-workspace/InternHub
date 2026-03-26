@@ -14,7 +14,9 @@ export default function ProfilePage() {
     name: "",
     email: "",
     gender: "",
-    college: ""
+    college: "",
+    contact_number: "",
+    joining_date: "",
   });
 
   useEffect(() => {
@@ -24,12 +26,14 @@ export default function ProfilePage() {
       if (session.user.role !== "intern") {
         router.push("/dashboard");
       } else {
-        setFormData({
-          name: session.user.name || "",
-          email: session.user.email || "",
-          gender: session.user.gender || "",
-          college: session.user.college || ""
-        });
+          setFormData({
+            name: session.user.name || "",
+            email: session.user.email || "",
+            gender: session.user.gender || "",
+            college: session.user.college || "",
+            contact_number: session.user.contact_number || "",
+            joining_date: session.user.joining_date || ""
+          });
       }
     }
   }, [session, status]);
@@ -49,14 +53,31 @@ export default function ProfilePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: parseInt(session.user.id),
+          id: session.user.id,
           name: formData.name,
+          email: formData.email,
           college: formData.college,
           gender: formData.gender,
+          contact_number: formData.contact_number,
+          role: "intern"
         }),
       });
+      
       const data = await res.json();
+      if (!res.ok) {
+        setMessage({ text: data.error || "Failed to update profile.", type: "error" });
+        return;
+      }
       if (data.success) {
+        await update({
+          user: {
+            ...session.user,
+            name: formData.name,
+            college: formData.college,
+            gender: formData.gender,
+            contact_number: formData.contact_number,
+          }
+        });
         setMessage({ text: "Profile updated successfully!", type: "success" });
       } else {
         setMessage({ text: "Failed to update profile.", type: "error" });
@@ -135,6 +156,29 @@ export default function ProfilePage() {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                <input
+                  type="tel"
+                  name="contact_number"
+                  value={formData.contact_number}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  minLength={10} maxLength={10}
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Joining Date</label>
+                <input
+                  type="date"
+                  name="joining_date"
+                  value={formData.joining_date}
+                  disabled
+                  className="w-full px-4 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg outline-none cursor-not-allowed"
                 />
               </div>
             </div>
