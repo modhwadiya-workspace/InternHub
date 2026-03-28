@@ -6,6 +6,7 @@ export const managerSchema = Yup.object({
   email: emailField,
   password: passwordField,
   contact_number: contactNumberField,
+  gender: Yup.string().oneOf(["male", "female"], "Please select a gender").required("Gender is required"),
   department_id: Yup.string().required("Department is required"),
 });
 

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     if (nameFilter) whereClause += `{name: {_ilike: "%${nameFilter}%"}}, `;
     if (deptFilter && isAdmin) whereClause += `{department_id: {_eq: ${deptFilter}}}, `;
     if (genderFilter) whereClause += `{gender: {_eq: "${genderFilter}"}}, `;
-    if (collegeFilter) whereClause += `{collage: {_ilike: "%${collegeFilter}%"}}, `;
+    if (collegeFilter) whereClause += `{college: {_ilike: "%${collegeFilter}%"}}, `;
 
     whereClause += `]`;
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       }
       interns {
         user_id
-        collage
+        college
         joining_date
         status
       }
@@ -69,11 +69,7 @@ export async function GET(req: NextRequest) {
     const mappedUsers = fetchedUsers.map((user: any) => {
       if (user.role === "intern") {
         const internData = fetchedInterns.filter((i: any) => i.user_id === user.id);
-        // Map collage back to college for frontend consistency if desired, 
-        // but here we just pass the objects. 
-        // The frontend expects user.interns[0].college usually.
-        const mappedInternData = internData.map((i: any) => ({ ...i, college: i.collage }));
-        return { ...user, interns: mappedInternData };
+        return { ...user, interns: internData };
       }
       return user;
     });

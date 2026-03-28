@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE TABLE IF NOT EXISTS public.interns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE,
-    collage TEXT NOT NULL,
+    college TEXT NOT NULL,
     contact_number TEXT UNIQUE NOT NULL,
     joining_date DATE,
     status TEXT NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS public.interns
 (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
-    collage text COLLATE pg_catalog."default" NOT NULL,
+    college text COLLATE pg_catalog."default" NOT NULL,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     contact_number text COLLATE pg_catalog."default" NOT NULL,
     joining_date date,

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       const internMutation = `mutation (
         $id: uuid!,
         $user_id: uuid!,
-        $collage: String,
+        $college: String,
         $joining_date: date,
         $date_of_birth: date,
         $degree: String,
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         insert_interns_one(object: {
           id: $id,
           user_id: $user_id,
-          collage: $collage,
+          college: $college,
           joining_date: $joining_date,
           date_of_birth: $date_of_birth,
           degree: $degree,
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       const internVariables = {
         id: crypto.randomUUID(),
         user_id: userId,
-        collage: college || null,
+        college: college || null,
         joining_date: joining_date || new Date().toISOString().split('T')[0],
         date_of_birth: date_of_birth || null,
         degree: degree || null,

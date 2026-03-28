@@ -63,14 +63,14 @@ function page() {
 
   const managerFormik = useFormik({
     enableReinitialize: true,
-    initialValues: { name: "", email: "", password: "", contact_number: "", department_id: departments[0]?.id?.toString() ?? "" },
+    initialValues: { name: "", email: "", password: "", contact_number: "", gender: "male" as "male" | "female", department_id: departments[0]?.id?.toString() ?? "" },
     validationSchema: managerSchema,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitError("");
       try {
         const res = await fetch("/api/signup", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...values, role: "manager", department_id: parseInt(values.department_id) }),
+          body: JSON.stringify({ ...values, role: "manager", department_id: parseInt(values.department_id), gender: values.gender }),
         });
         const data = await res.json();
         if (!res.ok || data.error) setSubmitError(data.error || "An error occurred");
@@ -177,9 +177,17 @@ function page() {
           {role === "manager" && (
             <div>
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Manager Details</h3>
-              <FormField label="Contact Number" id="contact_number" error={f.errors.contact_number} touched={f.touched.contact_number} required>
-                <input type="tel" name="contact_number" value={f.values.contact_number} onChange={f.handleChange} onBlur={f.handleBlur} placeholder="1234567890" className={getInputCls(f.touched.contact_number, f.errors.contact_number)} />
-              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Gender" id="gender" error={f.errors.gender} touched={f.touched.gender} required>
+                  <select name="gender" value={f.values.gender} onChange={f.handleChange} onBlur={f.handleBlur} className={`${getInputCls(f.touched.gender, f.errors.gender)} bg-white`}>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </FormField>
+                <FormField label="Contact Number" id="contact_number" error={f.errors.contact_number} touched={f.touched.contact_number} required>
+                  <input type="tel" name="contact_number" value={f.values.contact_number} onChange={f.handleChange} onBlur={f.handleBlur} placeholder="1234567890" className={getInputCls(f.touched.contact_number, f.errors.contact_number)} />
+                </FormField>
+              </div>
             </div>
           )}
 

@@ -38,9 +38,8 @@ export const authOptions = {
           const user = emailRes?.data?.users?.[0];
           if (!user) return null;
 
-          // 🔹 2. Password check (bcrypt + legacy fallback)
+          // 🔹 2. Password check (bcrypt only)
           let passwordMatch = false;
-
           try {
             passwordMatch = await bcrypt.compare(
               credentials?.password,
@@ -50,18 +49,14 @@ export const authOptions = {
             passwordMatch = false;
           }
 
-          const legacyMatch =
-            !passwordMatch &&
-            user.password === credentials?.password;
-
-          if (!passwordMatch && !legacyMatch) return null;
+          if (!passwordMatch) return null;
 
           // 🔹 3. Role-based extra data (intern)
           if (user.role === "intern") {
             const internQuery = `
               query ($user_id: uuid!) {
                 interns(where: {user_id: {_eq: $user_id}}) {
-                  collage
+                  college
                   joining_date
                   date_of_birth
                   degree
@@ -77,7 +72,7 @@ export const authOptions = {
               const internData = internRes?.data?.interns?.[0];
 
               if (internData) {
-                user.college = internData.collage;
+                user.college = internData.college;
                 user.joining_date = internData.joining_date;
                 user.date_of_birth = internData.date_of_birth;
                 user.degree = internData.degree;

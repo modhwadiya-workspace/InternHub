@@ -12,7 +12,11 @@ export function isValidName(name: string | undefined | null): boolean {
 
 export function isValidPassword(password: string | undefined | null): boolean {
   if (!password) return false;
-  return password.length >= 6;
+  const hasMinLength = password.length >= 6;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  return hasMinLength && hasUppercase && hasNumber && hasSpecial;
 }
 
 export function isValidDepartmentName(name: string | undefined | null): boolean {
@@ -28,7 +32,7 @@ export function isValidContactNumber(num: string | undefined | null): boolean {
 export function validateUserRegistration(data: any): { valid: boolean; message?: string } {
     if (!isValidName(data.name)) return { valid: false, message: "Name must be at least 2 characters long." };
     if (!isValidEmail(data.email)) return { valid: false, message: "Invalid email format." };
-    if (!isValidPassword(data.password)) return { valid: false, message: "Password must be at least 6 characters long." };
+    if (!isValidPassword(data.password)) return { valid: false, message: "Password must be at least 6 characters, with one uppercase letter, one number, and one special character." };
     
     if (!isValidContactNumber(data.contact_number)) return { valid: false, message: "Contact number must be exactly 10 digits." };
 

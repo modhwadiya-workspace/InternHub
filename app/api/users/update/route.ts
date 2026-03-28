@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (targetUser.role === "intern") {
-      let customSets = [`collage: $collage`];
+      let customSets = [`college: $college`];
       let variablesPayload: any = {
         user_id: String(userId),
-        collage: college ?? null,
+        college: college ?? null,
       };
 
       if (session.user.role === "admin" || session.user.role === "manager") {

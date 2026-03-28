@@ -303,7 +303,7 @@ export default function UsersPage() {
                         <option value="inactive" className="text-slate-800 bg-white">Inactive</option>
                       </select>
                     </td>
-                    <td>
+                    <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEditClick(user)}
