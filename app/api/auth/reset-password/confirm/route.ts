@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gql } from "@/lib/hasura";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,17 +30,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
     }
 
-    // 2. Update user password
-    // Using plain text password update as per existing pattern
-    const updateMutation = `mutation ($email: String!, $newPassword: String!) {
+    // 2. Hash the new password and update user password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    const updateMutation = `mutation ($email: String!, $hashedPassword: String!) {
       update_users(
         where: {email: {_eq: $email}},
-        _set: {password: $newPassword}
+        _set: {password: $hashedPassword}
       ) {
         affected_rows
       }
     }`;
-    const updateRes = await gql(updateMutation, { email, newPassword });
+    const updateRes = await gql(updateMutation, { email, hashedPassword });
 
     if (updateRes.errors) {
        console.error("Password Reset Error:", updateRes.errors);

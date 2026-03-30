@@ -1,9 +1,61 @@
-import { gql } from "./hasura";
+import { gql, metadata } from "./hasura";
 import bcrypt from "bcryptjs";
 
 export async function ensureAdminExists() {
   try {
     console.log("🛠 Checking for default admin user...");
+
+    // 0. Ensure Hasura is configured correctly (Add source and track tables)
+    console.log("🛠 Ensuring Hasura metadata is configured...");
+    const DB_URL = "postgres://postgres:postgres@postgres:5432/internhub";
+    
+    // Attempt to add source (might already exist)
+    await metadata("pg_add_source", {
+      name: "default",
+      configuration: {
+        connection_info: {
+          database_url: DB_URL,
+          pool_settings: { max_connections: 50, idle_timeout: 180, retries: 1 }
+        }
+      }
+    });
+
+    // Track required tables
+    const tables = ["users", "departments", "interns", "announcements", "password_reset_otps"];
+    for (const table of tables) {
+      await metadata("pg_track_table", {
+        source: "default",
+        table: { schema: "public", name: table }
+      });
+    }
+
+    // Track relationships (Ignore errors if already exist)
+    try {
+      await metadata("pg_create_object_relationship", {
+        source: "default",
+        table: { schema: "public", name: "users" },
+        name: "department",
+        using: { foreign_key_constraint_on: "department_id" }
+      });
+    } catch (e) {}
+
+    try {
+      await metadata("pg_create_array_relationship", {
+        source: "default",
+        table: { schema: "public", name: "users" },
+        name: "interns",
+        using: { foreign_key_constraint_on: { table: { schema: "public", name: "interns" }, column: "user_id" } }
+      });
+    } catch (e) {}
+
+    try {
+      await metadata("pg_create_object_relationship", {
+        source: "default",
+        table: { schema: "public", name: "interns" },
+        name: "user",
+        using: { foreign_key_constraint_on: "user_id" }
+      });
+    } catch (e) {}
 
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@internhub.com";
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";

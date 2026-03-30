@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { validateUserRegistration } from "@/lib/validation";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { sendSignupWelcomeEmail } from "@/lib/welcome-email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `User created but intern details failed: ${internRes.errors[0].message}` }, { status: 500 });
       }
     }
-
+    await sendSignupWelcomeEmail(email, password, name);
     return NextResponse.json({ success: true, user_id: userId });
   } catch (err) {
     console.error("POST /api/signup Error:", err);

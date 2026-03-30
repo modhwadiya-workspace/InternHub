@@ -4,14 +4,11 @@ export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/**
- * Sends an OTP to an email address using Nodemailer.
- */
 export async function sendOTPMock(email: string, otp: string) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465", // true for 465, false for other ports
+    secure: process.env.SMTP_PORT === "465",
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -48,3 +45,4 @@ export async function sendOTPMock(email: string, otp: string) {
     throw new Error("Failed to send OTP email.");
   }
 }
+// End of file
