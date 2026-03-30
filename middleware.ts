@@ -11,7 +11,7 @@ export default withAuth(
     // 1. Redirect loop protection & Role-based redirection
     
     // Admin-only routes
-    if ((path.startsWith("/departments") || path.startsWith("/managers")) && role !== "admin") {
+    if ((path.startsWith("/departments") || path.startsWith("/managers") || path.startsWith("/chat")) && role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
@@ -37,5 +37,6 @@ export const config = {
     "/managers/:path*",
     "/interns/:path*",
     "/profile/:path*",
+    "/chat/:path*",
   ],
 };

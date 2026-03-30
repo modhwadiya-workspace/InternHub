@@ -9,6 +9,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isAuthPage = pathname === "/" || pathname === "/signup";
+  const isChatPage = pathname === "/chat";
 
   if (status === "loading") {
     return (
@@ -41,14 +42,22 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "var(--bg-base)" }}>
+    <div className="flex flex-col h-screen" style={{ background: "var(--bg-base)" }}>
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         {session?.user && <Sidebar />}
-        <main className="flex-1 overflow-y-auto h-[calc(100vh-4rem)]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </div>
+        {/* For chat page: no padding, no wrapper - full height scrolling inside VannaChat */}
+        {/* For other pages: with padding and max-width wrapper */}
+        <main className="flex-1 overflow-hidden">
+          {isChatPage ? (
+            children
+          ) : (
+            <div className="overflow-y-auto h-full">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
