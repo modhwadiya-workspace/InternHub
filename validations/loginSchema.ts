@@ -2,11 +2,10 @@ import * as Yup from "yup";
 
 export const loginSchema = Yup.object().shape({
   email: Yup.string()
-    .email("Invalid email address")
-    .required("Email is required"),
+    .email("Please enter a valid email address")
+    .required("Please enter your email address"),
   password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
+    .required("Please enter your password"),
 });
 
 export interface LoginFormValues extends Yup.InferType<typeof loginSchema> {}

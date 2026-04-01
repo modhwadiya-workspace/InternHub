@@ -8,10 +8,13 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { setInternsSearch, setInternsDepartment, setInternsGender } from "@/lib/redux/slices/internsFilterSlice";
 
 function StatusBadge({ status }: { status: string }) {
+  const badgeCls = status === "inactive" ? "badge-danger" : status === "confirmed" ? "badge-indigo" : "badge-success";
+  const dotCls = status === "inactive" ? "bg-red-500" : status === "confirmed" ? "bg-indigo-500" : "bg-emerald-500";
+  const label = status === "inactive" ? "Inactive" : status === "confirmed" ? "Confirmed" : "Active";
   return (
-    <span className={`badge ${status === "inactive" ? "badge-danger" : "badge-success"}`}>
-      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${status === "inactive" ? "bg-red-500" : "bg-emerald-500"}`} />
-      {status === "inactive" ? "Inactive" : "Active"}
+    <span className={`badge ${badgeCls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${dotCls}`} />
+      {label}
     </span>
   );
 }
@@ -294,11 +297,14 @@ export default function UsersPage() {
                         className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer appearance-none ${
                           user.interns?.[0]?.status === "inactive"
                             ? "bg-red-100 text-red-700"
+                            : user.interns?.[0]?.status === "confirmed"
+                            ? "bg-indigo-100 text-indigo-700"
                             : "bg-emerald-100 text-emerald-700"
                         }`}
                       >
                         <option value="active" className="text-slate-800 bg-white">Active</option>
                         <option value="inactive" className="text-slate-800 bg-white">Inactive</option>
+                        <option value="confirmed" className="text-slate-800 bg-white">Confirmed</option>
                       </select>
                     </td>
                     <td className="pr-6" style={{ textAlign: 'right' }}>
@@ -418,6 +424,7 @@ export default function UsersPage() {
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                    <option value="confirmed">Confirmed</option>
                   </select>
                 </div>
               </div>

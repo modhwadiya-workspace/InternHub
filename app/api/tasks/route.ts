@@ -245,3 +245,54 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Only Admin/Manager can delete tasks
+    if (session.user.role === "intern") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const group_id = searchParams.get("group_id");
+
+    if (!id && !group_id) {
+      return NextResponse.json({ error: "Task ID or Group ID is required." }, { status: 400 });
+    }
+
+    let mutation: string;
+    let variables: any;
+
+    if (group_id) {
+      // Delete all tasks in a group
+      mutation = `mutation ($group_id: uuid!) {
+        delete_tasks(where: {group_id: {_eq: $group_id}}) {
+          affected_rows
+        }
+      }`;
+      variables = { group_id };
+    } else {
+      // Delete a single task
+      mutation = `mutation ($id: uuid!) {
+        delete_tasks_by_pk(id: $id) {
+          id
+        }
+      }`;
+      variables = { id };
+    }
+
+    const res = await gql(mutation, variables);
+    if (res.errors) {
+      return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/tasks Error:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

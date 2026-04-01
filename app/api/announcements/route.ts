@@ -159,3 +159,117 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: user_id, role } = session.user as { id: string; role: string };
+
+    if (role === "intern") {
+      return NextResponse.json({ error: "Forbidden. Interns cannot edit announcements." }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { id, title, message } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "Announcement ID is required." }, { status: 400 });
+    }
+
+    if (!title || !message) {
+      return NextResponse.json({ error: "Title and message are required." }, { status: 400 });
+    }
+
+    // Check ownership — only the creator or an admin can edit
+    if (role !== "admin") {
+      const checkRes = await gql(`query ($id: uuid!) {
+        announcements(where: {id: {_eq: $id}}) {
+          created_by
+        }
+      }`, { id });
+
+      const ann = checkRes.data?.announcements?.[0];
+      if (!ann || ann.created_by !== user_id) {
+        return NextResponse.json({ error: "You can only edit your own announcements." }, { status: 403 });
+      }
+    }
+
+    const mutation = `mutation UpdateAnnouncement($id: uuid!, $title: String!, $message: String!) {
+      update_announcements_by_pk(pk_columns: {id: $id}, _set: {title: $title, message: $message}) {
+        id
+        title
+        message
+      }
+    }`;
+
+    const res = await gql(mutation, { id, title, message });
+
+    if (res.errors) {
+      console.error("GraphQL errors updating announcement:", res.errors);
+      return NextResponse.json({ error: "Failed to update announcement", details: res.errors }, { status: 500 });
+    }
+
+    return NextResponse.json({ announcement: res.data?.update_announcements_by_pk });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: user_id, role } = session.user as { id: string; role: string };
+
+    if (role === "intern") {
+      return NextResponse.json({ error: "Forbidden. Interns cannot delete announcements." }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Announcement ID is required." }, { status: 400 });
+    }
+
+    // Ownership check — only creator or admin can delete
+    if (role !== "admin") {
+      const checkRes = await gql(`query ($id: uuid!) {
+        announcements(where: {id: {_eq: $id}}) {
+          created_by
+        }
+      }`, { id });
+
+      const ann = checkRes.data?.announcements?.[0];
+      if (!ann || ann.created_by !== user_id) {
+        return NextResponse.json({ error: "You can only delete your own announcements." }, { status: 403 });
+      }
+    }
+
+    const mutation = `mutation ($id: uuid!) {
+      delete_announcements_by_pk(id: $id) {
+        id
+      }
+    }`;
+
+    const res = await gql(mutation, { id });
+
+    if (res.errors) {
+      console.error("GraphQL errors deleting announcement:", res.errors);
+      return NextResponse.json({ error: "Failed to delete announcement" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

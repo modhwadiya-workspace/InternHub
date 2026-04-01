@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gql } from "@/lib/hasura";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { validateUserRegistration } from "@/lib/validation";
+import { validateUserRegistration, friendlyDbError } from "@/lib/validation";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { sendSignupWelcomeEmail } from "@/lib/welcome-email";
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const res = await gql(mutation, variables);
 
     if (res.errors) {
-      return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 400 });
     }
 
     const userId = res.data?.insert_users_one?.id;
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
       if (internRes.errors) {
         console.error("Intern Insert Error:", internRes.errors);
-        return NextResponse.json({ error: `User created but intern details failed: ${internRes.errors[0].message}` }, { status: 500 });
+        return NextResponse.json({ error: friendlyDbError(internRes.errors[0].message) }, { status: 500 });
       }
     }
 

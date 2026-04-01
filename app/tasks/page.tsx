@@ -37,6 +37,16 @@ export default function TasksPage() {
     }
   }, [session]);
 
+  const handleDeleteTask = async (id: string, groupId?: string) => {
+    try {
+      const params = groupId ? `group_id=${groupId}` : `id=${id}`;
+      const res = await fetch(`/api/tasks?${params}`, { method: "DELETE" });
+      if (res.ok) fetchTasks();
+    } catch (err) {
+      console.error("Failed to delete task", err);
+    }
+  };
+
   const filteredTasks = tasks.filter((task: any) => 
     activeTab === "all" ? true : task.status === activeTab
   );
@@ -103,6 +113,7 @@ export default function TasksPage() {
               setTaskToEdit({ task, group });
               setIsEditModalOpen(true);
             }}
+            onDelete={handleDeleteTask}
           />
         )}
       </div>

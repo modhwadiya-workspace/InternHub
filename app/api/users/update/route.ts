@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { gql } from "@/lib/hasura";
-import { validateUserUpdate } from "@/lib/validation";
+import { validateUserUpdate, friendlyDbError } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const res = await gql(mutation, variables);
 
     if (res.errors) {
-      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0]?.message || "Failed to update profile") }, { status: 500 });
     }
 
     if (targetUser.role === "intern") {

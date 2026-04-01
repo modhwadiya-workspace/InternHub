@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { gql } from "@/lib/hasura";
 import bcrypt from "bcryptjs";
+import { friendlyDbError } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
     const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword });
 
     if (res.errors) {
-      return NextResponse.json({ error: res.errors[0].message }, { status: 500 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, user: res.data.insert_users_one });

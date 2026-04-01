@@ -11,6 +11,7 @@ export default function LeaveRequestForm({ onSuccess }: LeaveRequestFormProps) {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const todayStr = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState({
     start_date: "",
     end_date: "",
@@ -76,6 +77,7 @@ export default function LeaveRequestForm({ onSuccess }: LeaveRequestFormProps) {
               <input
                 type="date"
                 required
+                min={todayStr}
                 className="input-field !pl-12 bg-slate-50/50"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
@@ -91,6 +93,7 @@ export default function LeaveRequestForm({ onSuccess }: LeaveRequestFormProps) {
               <input
                 type="date"
                 required
+                min={todayStr}
                 className="input-field !pl-12 bg-slate-50/50"
                 value={formData.end_date}
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
