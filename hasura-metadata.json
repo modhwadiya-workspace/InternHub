@@ -1,0 +1,184 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "kind": "postgres",
+      "tables": [],
+      "configuration": {
+        "connection_info": {
+          "database_url": "postgres://postgres:postgres@postgres:5432/internhub",
+          "isolation_level": "read-committed",
+          "pool_settings": {
+            "connection_lifetime": 600,
+            "idle_timeout": 180,
+            "max_connections": 50,
+            "retries": 1
+          },
+          "use_prepared_statements": false
+        }
+      }
+    },
+    {
+      "name": "Internhub",
+      "kind": "postgres",
+      "tables": [
+        {
+          "table": {
+            "name": "announcements",
+            "schema": "public"
+          },
+          "object_relationships": [
+            {
+              "name": "department",
+              "using": {
+                "foreign_key_constraint_on": "department_id"
+              }
+            },
+            {
+              "name": "user",
+              "using": {
+                "foreign_key_constraint_on": "created_by"
+              }
+            }
+          ]
+        },
+        {
+          "table": {
+            "name": "departments",
+            "schema": "public"
+          },
+          "array_relationships": [
+            {
+              "name": "announcements",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "column": "department_id",
+                  "table": {
+                    "name": "announcements",
+                    "schema": "public"
+                  }
+                }
+              }
+            },
+            {
+              "name": "users",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "column": "department_id",
+                  "table": {
+                    "name": "users",
+                    "schema": "public"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "table": {
+            "name": "interns",
+            "schema": "public"
+          },
+          "object_relationships": [
+            {
+              "name": "user",
+              "using": {
+                "foreign_key_constraint_on": "user_id"
+              }
+            }
+          ]
+        },
+        {
+          "table": {
+            "name": "password_reset_otps",
+            "schema": "public"
+          }
+        },
+        {
+          "table": {
+            "name": "users",
+            "schema": "public"
+          },
+          "object_relationships": [
+            {
+              "name": "department",
+              "using": {
+                "foreign_key_constraint_on": "department_id"
+              }
+            },
+            {
+              "name": "intern",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "column": "user_id",
+                  "table": {
+                    "name": "interns",
+                    "schema": "public"
+                  }
+                }
+              }
+            }
+          ],
+          "array_relationships": [
+            {
+              "name": "announcements",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "column": "created_by",
+                  "table": {
+                    "name": "announcements",
+                    "schema": "public"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "table": {
+            "name": "leaves",
+            "schema": "public"
+          },
+          "object_relationships": [
+            {
+              "name": "user",
+              "using": {
+                "foreign_key_constraint_on": "user_id"
+              }
+            }
+          ]
+        },
+        {
+          "table": {
+            "name": "tasks",
+            "schema": "public"
+          },
+          "object_relationships": [
+            {
+              "name": "assigned_to_user",
+              "using": {
+                "foreign_key_constraint_on": "assigned_to"
+              }
+            },
+            {
+              "name": "created_by_user",
+              "using": {
+                "foreign_key_constraint_on": "created_by"
+              }
+            }
+          ]
+        }
+      ],
+      "configuration": {
+        "connection_info": {
+          "database_url": {
+            "from_env": "PG_DATABASE_URL"
+          },
+          "isolation_level": "read-committed",
+          "use_prepared_statements": false
+        }
+      }
+    }
+  ]
+}
