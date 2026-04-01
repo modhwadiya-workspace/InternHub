@@ -3,7 +3,7 @@ services:
     image: postgres:15
     restart: always
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -14,7 +14,7 @@ services:
   graphql-engine:
     image: hasura/graphql-engine:v2.46.0
     ports:
-      - "8080:8080"
+      - "8082:8080"
     restart: always
     environment:
       ## postgres database to store Hasura metadata
@@ -38,7 +38,7 @@ services:
     image: hasura/graphql-data-connector:v2.46.0
     restart: always
     ports:
-      - 8081:8081
+      - 8083:8081
     environment:
       QUARKUS_LOG_LEVEL: ERROR # FATAL, ERROR, WARN, INFO, DEBUG, TRACE
       ## https://quarkus.io/guides/opentelemetry#configuration-reference
@@ -54,7 +54,7 @@ services:
     image: dpage/pgadmin4:latest
     restart: always
     ports:
-      - "5050:80"
+      - "5051:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -66,7 +66,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY}
       DB_HOST: postgres

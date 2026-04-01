@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { gql } from "@/lib/hasura";
+import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,34 +13,46 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const roleParam = searchParams.get("role");
-    
+
     // RBAC: Manager can only see interns in their department
     const isAdmin = session.user.role === "admin";
     const managerDeptId = session.user.department_id;
 
-    let whereClause = `_and: [`;
+    // Construct the where clause using an array to avoid trailing commas
+    const filters: string[] = [];
 
     if (!isAdmin) {
-      whereClause += `{role: {_eq: "intern"}}, {department_id: {_eq: ${managerDeptId}}}, `;
+      // Logic for Manager: Only see interns in their department
+      filters.push(`{role: {_eq: "intern"}}`);
+      filters.push(`{department_id: {_eq: ${managerDeptId}}}`);
     } else if (roleParam) {
-      whereClause += `{role: {_eq: "${roleParam}"}}, `;
+      // Logic for Admin filtering by role
+      filters.push(`{role: {_eq: "${roleParam}"}}`);
     }
 
-    // Grab frontend filters if provided
-    const nameFilter = searchParams.get("name");
     const deptFilter = searchParams.get("department_id");
+    if (deptFilter && isAdmin) {
+      filters.push(`{department_id: {_eq: ${deptFilter}}}`);
+    }
+
     const genderFilter = searchParams.get("gender");
-    const collegeFilter = searchParams.get("college");
+    if (genderFilter) {
+      filters.push(`{gender: {_eq: "${genderFilter}"}}`);
+    }
 
-    if (nameFilter) whereClause += `{name: {_ilike: "%${nameFilter}%"}}, `;
-    if (deptFilter && isAdmin) whereClause += `{department_id: {_eq: ${deptFilter}}}, `;
-    if (genderFilter) whereClause += `{gender: {_eq: "${genderFilter}"}}, `;
-    if (collegeFilter) whereClause += `{college: {_ilike: "%${collegeFilter}%"}}, `;
+    const searchFilter = searchParams.get("search");
+    if (searchFilter) {
+      filters.push(`{_or: [
+        {name: {_ilike: "%${searchFilter}%"}},
+        {email: {_ilike: "%${searchFilter}%"}},
+        {interns: {college: {_ilike: "%${searchFilter}%"}}}
+      ]}`);
+    }
 
-    whereClause += `]`;
+    const whereClause = filters.length > 0 ? `where: {_and: [${filters.join(", ")}]}` : "";
 
     const query = `query {
-      users(where: {${whereClause}}, order_by: {created_at: desc}) {
+      users(${whereClause}, order_by: {created_at: desc}) {
         id
         name
         email
@@ -47,12 +60,11 @@ export async function GET(req: NextRequest) {
         gender
         contact_number
         department_id
-      }
-      interns {
-        user_id
-        college
-        joining_date
-        status
+        interns {
+          college
+          joining_date
+          status
+        }
       }
     }`;
 
@@ -63,20 +75,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 
-    const fetchedUsers = res.data?.users || [];
-    const fetchedInterns = res.data?.interns || [];
-
-    const mappedUsers = fetchedUsers.map((user: any) => {
-      if (user.role === "intern") {
-        const internData = fetchedInterns.filter((i: any) => i.user_id === user.id);
-        return { ...user, interns: internData };
-      }
-      return user;
-    });
-
-    return NextResponse.json({ users: mappedUsers });
+    return NextResponse.json({ users: res.data?.users || [] });
   } catch (err) {
     console.error("GET /api/users Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { name, email, role, department_id, gender } = await req.json();
+
+    const hashedPassword = await bcrypt.hash("password123", 12);
+
+    const mutation = `
+      mutation ($name: String!, $email: String!, $role: String!, $department_id: Int, $gender: String, $password: String!) {
+        insert_users_one(object: {
+          name: $name,
+          email: $email,
+          role: $role,
+          department_id: $department_id,
+          gender: $gender,
+          password: $password
+        }) {
+          id
+        }
+      }
+    `;
+
+    const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword });
+
+    if (res.errors) {
+      return NextResponse.json({ error: res.errors[0].message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, user: res.data.insert_users_one });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

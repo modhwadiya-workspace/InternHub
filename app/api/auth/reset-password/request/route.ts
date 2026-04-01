@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gql, metadata } from "@/lib/hasura";
 import { generateOTP, sendOTPMock } from "@/lib/otp";
 
 export async function POST(req: NextRequest) {
@@ -32,21 +32,11 @@ export async function POST(req: NextRequest) {
     // Let's assume for now I'll track the table.
     // Actually, I can use the 'run_sql' endpoint in the API (though not ideal for performance).
     // Better: I'll track the table in Hasura.
-    
-    // I'll use run_sql for now to ensure it works without manual Hasura console intervention
-    const trackTable = await fetch('http://localhost:8080/v1/query', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-hasura-admin-secret': 'myadminsecretkey'
-      },
-      body: JSON.stringify({
-        type: 'pg_track_table',
-        args: {
-          source: 'default',
-          table: 'password_reset_otps'
-        }
-      })
+
+    // Use the metadata utility which already points to the correct port (8082)
+    await metadata("pg_track_table", {
+      source: "default",
+      table: { schema: "public", name: "password_reset_otps" }
     });
     // Ignore errors if already tracked
 

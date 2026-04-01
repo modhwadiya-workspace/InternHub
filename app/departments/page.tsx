@@ -12,6 +12,8 @@ export default function DepartmentsPage() {
   const [newDept, setNewDept] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/");
@@ -31,23 +33,45 @@ export default function DepartmentsPage() {
 
   const addDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (!newDept.trim()) return;
-    if (!isValidDepartmentName(newDept)) { alert("Department name must be at least 2 characters long."); return; }
+    if (!isValidDepartmentName(newDept)) { 
+      setError("Department name must be at least 2 characters long."); 
+      return; 
+    }
     setAdding(true);
     try {
       const res = await fetch("/api/departments/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newDept }) });
       const data = await res.json();
-      if (data.department) { setDepartments([...departments, data.department]); setNewDept(""); }
-    } catch (err) { console.error(err); }
-    finally { setAdding(false); }
+      if (data.department) { 
+        setDepartments([...departments, data.department]); 
+        setNewDept(""); 
+      } else {
+        setError(data.error || "Failed to create department");
+      }
+    } catch (err) { 
+      setError("An error occurred during creation");
+    } finally { 
+      setAdding(false); 
+    }
   };
 
-  const deleteDepartment = async (id: number) => {
-    if (!confirm("Delete this department? This may affect related interns.")) return;
+  const confirmedDelete = async () => {
+    if (!deleteId) return;
     try {
-      await fetch("/api/departments/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-      setDepartments(departments.filter((d) => d.id !== id));
-    } catch (err) { console.error(err); }
+      const res = await fetch("/api/departments/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: deleteId }) });
+      if (res.ok) {
+        setDepartments(departments.filter((d) => d.id !== deleteId));
+        setDeleteId(null);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to delete department");
+        setDeleteId(null);
+      }
+    } catch (err) { 
+      setError("An error occurred during deletion");
+      setDeleteId(null);
+    }
   };
 
   if (status === "loading" || (status === "authenticated" && session.user.role !== "admin")) return null;
@@ -70,11 +94,17 @@ export default function DepartmentsPage() {
           </svg>
           Add New Department
         </h2>
+        {error && (
+          <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 mb-4">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {error}
+          </div>
+        )}
         <form onSubmit={addDepartment} className="flex gap-3">
           <input
             type="text"
             value={newDept}
-            onChange={(e) => setNewDept(e.target.value)}
+            onChange={(e) => { setNewDept(e.target.value); setError(""); }}
             placeholder="e.g. Software Engineering"
             className="input-base flex-1"
           />
@@ -98,7 +128,7 @@ export default function DepartmentsPage() {
               <tr>
                 <th style={{ width: 60 }}>#</th>
                 <th>Department Name</th>
-                <th className="text-right">Action</th>
+                <th className="pr-6" style={{ textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -132,9 +162,9 @@ export default function DepartmentsPage() {
                         <span className="font-medium text-slate-800">{dept.name}</span>
                       </div>
                     </td>
-                    <td className="text-right">
+                    <td className="pr-6" style={{ textAlign: 'right' }}>
                       <button
-                        onClick={() => deleteDepartment(dept.id)}
+                        onClick={() => setDeleteId(dept.id)}
                         className="btn btn-danger text-xs px-2.5 py-1.5"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,6 +180,25 @@ export default function DepartmentsPage() {
           </table>
         </div>
       </div>
+
+      {/* Custom Delete Modal */}
+      {deleteId && (
+        <div className="modal-overlay" onClick={() => setDeleteId(null)}>
+          <div className="modal-card max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Department?</h3>
+              <p className="text-sm text-slate-500 mb-6">This action will affect all interns in this department. Experience and historical data may be lost.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-1">Cancel</button>
+                <button onClick={confirmedDelete} className="btn btn-danger flex-1 bg-red-600 text-white border-0 hover:bg-red-700">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

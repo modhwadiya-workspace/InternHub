@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { validateUserUpdate } from "@/lib/validation";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { setInternsSearch, setInternsDepartment, setInternsGender } from "@/lib/redux/slices/internsFilterSlice";
 
 function StatusBadge({ status }: { status: string }) {
   return (
@@ -33,16 +35,15 @@ function Avatar({ name }: { name: string }) {
 export default function UsersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const internsFilter = useAppSelector((state) => state.internsFilter);
 
   const [users, setUsers] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<any>(null);
-
-  const [nameFilter, setNameFilter] = useState("");
-  const [deptFilter, setDeptFilter] = useState("");
-  const [genderFilter, setGenderFilter] = useState("");
-  const [collegeFilter, setCollegeFilter] = useState("");
+  const [error, setError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -53,7 +54,7 @@ export default function UsersPage() {
       fetchDepartments();
       fetchUsers();
     }
-  }, [status, session, nameFilter, deptFilter, genderFilter, collegeFilter]);
+  }, [status, session, internsFilter]);
 
   const fetchDepartments = async () => {
     try {
@@ -69,10 +70,9 @@ export default function UsersPage() {
       if (!session?.user) return;
       const isAdmin = session.user.role === "admin";
       const params = new URLSearchParams();
-      if (nameFilter) params.append("name", nameFilter);
-      if (deptFilter && isAdmin) params.append("department_id", deptFilter);
-      if (genderFilter) params.append("gender", genderFilter);
-      if (collegeFilter) params.append("college", collegeFilter);
+      if (internsFilter.search) params.append("search", internsFilter.search);
+      if (internsFilter.department_id && isAdmin) params.append("department_id", internsFilter.department_id);
+      if (internsFilter.gender) params.append("gender", internsFilter.gender);
       params.append("role", "intern");
       const res = await fetch(`/api/users?${params.toString()}`);
       const data = await res.json();
@@ -82,6 +82,7 @@ export default function UsersPage() {
   };
 
   const handleEditClick = (user: any) => {
+    setError("");
     const internData = user.interns?.[0] || {};
     setEditingUser({
       ...user,
@@ -92,29 +93,31 @@ export default function UsersPage() {
     });
   };
 
-  const deleteUser = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this intern?")) return;
+  const confirmedDelete = async () => {
+    if (!deleteConfirm) return;
     try {
       const res = await fetch("/api/users/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: deleteConfirm }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setUsers(users.filter((u) => u.id !== id));
-      } else {
-        alert(data.error || "Failed to delete user");
+        setUsers(users.filter((u) => u.id !== deleteConfirm));
+        setDeleteConfirm(null);
+      } else { 
+        setError(data.error || "Failed to delete user"); 
       }
-    } catch (err) { console.error(err); alert("Error deleting user"); }
+    } catch (err) { console.error(err); }
   };
 
   const updateUser = async () => {
     if (!editingUser) return;
+    setError("");
     const validation = validateUserUpdate({ ...editingUser, role: "intern" });
-    if (!validation.valid) { alert(validation.message); return; }
+    if (!validation.valid) { setError(validation.message || "Invalid input"); return; }
     try {
-      await fetch("/api/users/update", {
+      const res = await fetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,9 +133,14 @@ export default function UsersPage() {
           role: "intern",
         }),
       });
-      setEditingUser(null);
-      fetchUsers();
-    } catch (err) { console.error(err); }
+      if (res.ok) {
+        setEditingUser(null);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to update user");
+      }
+    } catch (err) { setError("An error occurred during update"); }
   };
 
   const handleStatusChange = async (user: any, newStatus: string) => {
@@ -151,7 +159,7 @@ export default function UsersPage() {
           joining_date: user.interns?.[0]?.joining_date, status: newStatus, role: "intern",
         }),
       });
-      if (!res.ok) { setUsers(originalUsers); alert("Failed to update status"); }
+      if (!res.ok) { setUsers(originalUsers); }
     } catch (err) { console.error(err); setUsers(originalUsers); }
   };
 
@@ -189,23 +197,25 @@ export default function UsersPage() {
           </svg>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filters</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="relative group col-span-1 sm:col-span-2 lg:col-span-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
               type="text"
-              placeholder="Search by name…"
-              value={nameFilter}
-              onChange={(e) => setNameFilter(e.target.value)}
-              className="input-base pl-9"
+              placeholder="Search by name, email, or college…"
+              value={internsFilter.search}
+              onChange={(e) => dispatch(setInternsSearch(e.target.value))}
+              className="input-base input-with-icon block w-full"
             />
           </div>
           {isAdmin && (
             <select
-              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
+              value={internsFilter.department_id}
+              onChange={(e) => dispatch(setInternsDepartment(e.target.value))}
               className="input-base bg-white"
             >
               <option value="">All Departments</option>
@@ -213,26 +223,14 @@ export default function UsersPage() {
             </select>
           )}
           <select
-            value={genderFilter}
-            onChange={(e) => setGenderFilter(e.target.value)}
+            value={internsFilter.gender}
+            onChange={(e) => dispatch(setInternsGender(e.target.value))}
             className="input-base bg-white"
           >
             <option value="">All Genders</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
           </select>
-          <div className="relative">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by college…"
-              value={collegeFilter}
-              onChange={(e) => setCollegeFilter(e.target.value)}
-              className="input-base pl-9"
-            />
-          </div>
         </div>
       </div>
 
@@ -248,7 +246,7 @@ export default function UsersPage() {
                 <th>College</th>
                 <th>Joining Date</th>
                 <th>Status</th>
-                <th className="text-right">Actions</th>
+                <th className="pr-6" style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -313,7 +311,7 @@ export default function UsersPage() {
                         <option value="inactive" className="text-slate-800 bg-white">Inactive</option>
                       </select>
                     </td>
-                    <td className="text-right">
+                    <td className="pr-6" style={{ textAlign: 'right' }}>
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEditClick(user)}
@@ -325,7 +323,7 @@ export default function UsersPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => deleteUser(user.id)}
+                          onClick={() => setDeleteConfirm(user.id)}
                           className="btn btn-danger text-xs px-2.5 py-1.5"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,22 +361,32 @@ export default function UsersPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              {[
-                { label: "Full Name", key: "name", type: "text" },
-                { label: "Email", key: "email", type: "email" },
-                { label: "Contact Number", key: "contact_number", type: "tel" },
-                { label: "College", key: "college", type: "text" },
-              ].map((f) => (
-                <div key={f.key}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
-                  <input
-                    type={f.type}
-                    value={editingUser[f.key] || ""}
-                    onChange={(e) => setEditingUser({ ...editingUser, [f.key]: e.target.value })}
-                    className="input-base"
-                  />
+              {error && (
+                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
                 </div>
-              ))}
+              )}
+              <div className="space-y-4">
+                {[
+                  { label: "Full Name", key: "name", type: "text" },
+                  { label: "Email", key: "email", type: "email" },
+                  { label: "Contact Number", key: "contact_number", type: "tel" },
+                  { label: "College", key: "college", type: "text" },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{f.label}</label>
+                    <input
+                      type={f.type}
+                      value={editingUser[f.key] || ""}
+                      onChange={(e) => setEditingUser({ ...editingUser, [f.key]: e.target.value })}
+                      className="input-base"
+                    />
+                  </div>
+                ))}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -428,6 +436,25 @@ export default function UsersPage() {
             <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
               <button onClick={() => setEditingUser(null)} className="btn btn-secondary">Cancel</button>
               <button onClick={updateUser} className="btn btn-primary">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-card max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Intern?</h3>
+              <p className="text-sm text-slate-500 mb-6">This action cannot be undone. All data related to this intern will be permanently removed.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirm(null)} className="btn btn-secondary flex-1">Keep</button>
+                <button onClick={confirmedDelete} className="btn btn-danger flex-1 bg-red-600 text-white border-0 hover:bg-red-700">Delete</button>
+              </div>
             </div>
           </div>
         </div>

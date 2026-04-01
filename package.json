@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "formik": "^2.4.9",
@@ -17,6 +18,8 @@
     "nodemailer": "^7.0.13",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-redux": "^9.2.0",
+    "redux-persist": "^6.0.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {
