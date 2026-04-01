@@ -1,4 +1,4 @@
-export const HASURA_URL = "http://localhost:8082/v1/graphql";
+export const HASURA_URL = "http://127.0.0.1:8082/v1/graphql";
 export const ADMIN_SECRET = "myadminsecretkey";
 
 export async function gql(query: string, variables: any = {}) {
