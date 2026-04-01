@@ -161,13 +161,24 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header flex items-center justify-between">
         <div>
           <h1 className="page-title">{isAdmin ? "User Directory" : "My Interns"}</h1>
           <p className="page-subtitle">
             {users.length} intern{users.length !== 1 ? "s" : ""} {isAdmin ? "total" : "under your supervision"}
           </p>
         </div>
+
+        {/* Add Intern Button */}
+        <button
+          onClick={() => router.push("/add/interns")}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Intern
+        </button>
       </div>
 
       {/* Filters */}
@@ -293,11 +304,10 @@ export default function UsersPage() {
                       <select
                         value={user.interns?.[0]?.status || "active"}
                         onChange={(e) => handleStatusChange(user, e.target.value)}
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer appearance-none ${
-                          user.interns?.[0]?.status === "inactive"
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer appearance-none ${user.interns?.[0]?.status === "inactive"
                             ? "bg-red-100 text-red-700"
                             : "bg-emerald-100 text-emerald-700"
-                        }`}
+                          }`}
                       >
                         <option value="active" className="text-slate-800 bg-white">Active</option>
                         <option value="inactive" className="text-slate-800 bg-white">Inactive</option>
