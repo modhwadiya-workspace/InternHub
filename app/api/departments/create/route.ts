@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       insert_departments_one(object: {name: $name}) { id name }
     }`;
     
-    const res = await gql(mutation, { name });
+    const res = await gql(mutation, { name }, session.hasuraToken as string);
 
     if (res.errors) {
       return NextResponse.json({ error: "Failed to create department" }, { status: 500 });

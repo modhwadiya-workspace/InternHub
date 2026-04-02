@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const checkQuery = `query { users_by_pk(id: "${userId}") { role department_id } }`;
-    const checkRes = await gql(checkQuery);
+    const checkRes = await gql(checkQuery, {}, session.hasuraToken as string);
     const targetUser = checkRes.data?.users_by_pk;
 
     if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       contact_number: contact_number ?? null,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
 
     if (res.errors) {
       return NextResponse.json({ error: friendlyDbError(res.errors[0]?.message || "Failed to update profile") }, { status: 500 });
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         }
       }`;
 
-      await gql(internMutation, variablesPayload);
+      await gql(internMutation, variablesPayload, session.hasuraToken as string);
     }
 
     return NextResponse.json({ success: true, user: res.data?.update_users_by_pk });

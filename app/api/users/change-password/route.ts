@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       }
     }`;
 
-    const fetchRes = await gql(fetchQuery, { id: String(session.user.id) });
+    const fetchRes = await gql(fetchQuery, { id: String(session.user.id) }, session.hasuraToken as string);
 
     if (fetchRes.errors || !fetchRes.data?.users_by_pk) {
       return NextResponse.json({ error: "Error verifying password." }, { status: 500 });
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const updateRes = await gql(updateMutation, {
       id: String(session.user.id),
       newPassword: hashedNewPassword
-    });
+    }, session.hasuraToken as string);
 
     if (updateRes.errors) {
       return NextResponse.json({ error: "Failed to update password." }, { status: 500 });

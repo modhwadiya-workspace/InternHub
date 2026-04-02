@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gqlAdmin } from "@/lib/hasura";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { validateUserRegistration, friendlyDbError } from "@/lib/validation";
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       gender: gender || null,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gqlAdmin(mutation, variables);
 
     if (res.errors) {
       return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 400 });
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         status: "active",
       };
 
-      const internRes = await gql(internMutation, internVariables);
+      const internRes = await gqlAdmin(internMutation, internVariables);
 
       if (internRes.errors) {
         console.error("Intern Insert Error:", internRes.errors);

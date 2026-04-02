@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       }
     }`;
 
-    const res = await gql(query);
+    const res = await gql(query, {}, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GET /api/users GraphQL Errors:", res.errors);
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       }
     `;
 
-    const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword });
+    const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword }, session.hasuraToken as string);
 
     if (res.errors) {
       return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 500 });

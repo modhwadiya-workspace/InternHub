@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       }`;
     }
 
-    const res = await gql(query, variables);
+    const res = await gql(query, variables, session.hasuraToken as string);
     return NextResponse.json({ leaves: res.data?.leaves || [] });
   } catch (err) {
     console.error("GET /api/leaves Error:", err);
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       leave_type: body.leave_type,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
     if (res.errors) return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
 
     return NextResponse.json({ success: true, leaf: res.data.insert_leaves_one });
@@ -140,7 +140,7 @@ export async function PATCH(req: NextRequest) {
             id
           }
       }`;
-      const checkRes = await gql(checkQuery, { id, dept_id: managerDeptId });
+      const checkRes = await gql(checkQuery, { id, dept_id: managerDeptId }, session.hasuraToken as string);
       if (!checkRes.data?.leaves?.length) {
           return NextResponse.json({ error: "Unauthorized access to this leave request (must be from your department's intern)" }, { status: 403 });
       }
@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest) {
       }
     }`;
 
-    const res = await gql(mutation, { id, status });
+    const res = await gql(mutation, { id, status }, session.hasuraToken as string);
     if (res.errors) return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
 
     return NextResponse.json({ success: true, leaf: res.data.update_leaves_by_pk });

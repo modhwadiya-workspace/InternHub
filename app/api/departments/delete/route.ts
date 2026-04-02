@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       delete_departments_by_pk(id: $id) { id }
     }`;
     
-    const res = await gql(mutation, { id });
+    const res = await gql(mutation, { id }, session.hasuraToken as string);
 
     if (res.errors) {
       return NextResponse.json({ error: "Failed to delete department" }, { status: 500 });

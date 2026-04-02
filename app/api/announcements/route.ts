@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         department_id
         created_at
       }
-    }`, {});
+    }`, {}, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GraphQL errors fetching announcements:", res.errors);
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         users(where: { id: { _eq: $id } }) {
           department_id
         }
-      }`, { id: String(userId) });
+      }`, { id: String(userId) }, session.hasuraToken as string);
 
       const myDeptId: number | null = userRes.data?.users?.[0]?.department_id ?? null;
 
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
             id
             department_id
           }
-        }`, { ids: creatorIds.map(id => String(id)) });
+        }`, { ids: creatorIds.map(id => String(id)) }, session.hasuraToken as string);
 
         if (!creatorsRes.errors && creatorsRes.data?.users) {
           for (const u of creatorsRes.data.users) {
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
             name
           }
         }
-      `, { ids: userIds.map(id => String(id)) });
+      `, { ids: userIds.map(id => String(id)) }, session.hasuraToken as string);
       if (!usersRes.errors && usersRes.data?.users) {
         const userMap = new Map(usersRes.data.users.map((u: any) => [u.id, u.name]));
         for (const a of announcements) {
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       created_by_role: role,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GraphQL errors creating announcement:", res.errors);

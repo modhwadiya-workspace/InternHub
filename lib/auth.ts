@@ -1,6 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
-import { gql } from "./hasura";
+import { gqlAdmin } from "./hasura";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 export const authOptions = {
   providers: [
@@ -26,7 +27,7 @@ export const authOptions = {
             }
           `;
 
-          const emailRes = await gql(emailQuery, {
+          const emailRes = await gqlAdmin(emailQuery, {
             email: credentials?.email,
           });
 
@@ -64,7 +65,7 @@ export const authOptions = {
               }
             `;
 
-            const internRes = await gql(internQuery, {
+            const internRes = await gqlAdmin(internQuery, {
               user_id: String(user.id),
             });
 
@@ -98,6 +99,7 @@ export const authOptions = {
 
   session: {
     strategy: "jwt" as const,
+    maxAge: 30 * 60, // 30 minutes (1800 seconds)
   },
 
   callbacks: {
@@ -116,6 +118,22 @@ export const authOptions = {
 
     async session({ session, token }: any) {
       session.user = token.user;
+
+      if (token?.user) {
+        const encodedToken = jwt.sign(
+          {
+            "https://hasura.io/jwt/claims": {
+              "x-hasura-allowed-roles": [token.user.role || "user"],
+              "x-hasura-default-role": token.user.role || "user",
+              "x-hasura-user-id": String(token.user.id),
+            },
+          },
+          process.env.HASURA_JWT_SECRET || "",
+          { algorithm: "HS256" }
+        );
+        session.hasuraToken = encodedToken;
+      }
+      
       return session;
     },
   },
