@@ -86,7 +86,7 @@ export default function UsersPage() {
 
   const handleEditClick = (user: any) => {
     setError("");
-    const internData = user.interns?.[0] || {};
+    const internData = user.intern || {};
     setEditingUser({
       ...user,
       college: internData.college || "",
@@ -149,7 +149,7 @@ export default function UsersPage() {
   const handleStatusChange = async (user: any, newStatus: string) => {
     const originalUsers = [...users];
     setUsers(users.map((u) =>
-      u.id === user.id ? { ...u, interns: [{ ...(u.interns?.[0] || {}), status: newStatus }] } : u
+      u.id === user.id ? { ...u, intern: { ...(u.intern || {}), status: newStatus } } : u
     ));
     try {
       const res = await fetch("/api/users/update", {
@@ -158,8 +158,8 @@ export default function UsersPage() {
         body: JSON.stringify({
           id: user.id, name: user.name, email: user.email,
           contact_number: user.contact_number, department_id: user.department_id,
-          college: user.interns?.[0]?.college, gender: user.gender,
-          joining_date: user.interns?.[0]?.joining_date, status: newStatus, role: "intern",
+          college: user.intern?.college, gender: user.gender,
+          joining_date: user.intern?.joining_date, status: newStatus, role: "intern",
         }),
       });
       if (!res.ok) { setUsers(originalUsers); }
@@ -233,6 +233,7 @@ export default function UsersPage() {
             <thead>
               <tr>
                 <th>Intern</th>
+                <th>Department</th>
                 <th>Gender</th>
                 <th>Contact</th>
                 <th>College</th>
@@ -281,23 +282,26 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td>
+                      <span className="badge badge-slate">{user.department?.name || "—"}</span>
+                    </td>
+                    <td>
                       <span className="capitalize badge badge-slate">{user.gender || "—"}</span>
                     </td>
                     <td className="text-slate-600">{user.contact_number || "—"}</td>
-                    <td className="text-slate-600 max-w-[160px] truncate">{user.interns?.[0]?.college || "—"}</td>
+                    <td className="text-slate-600 max-w-[160px] truncate">{user.intern?.college || "—"}</td>
                     <td className="text-slate-600">
-                      {user.interns?.[0]?.joining_date
-                        ? new Date(user.interns[0].joining_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                      {user.intern?.joining_date
+                        ? new Date(user.intern.joining_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                         : "—"}
                     </td>
                     <td>
                       <select
-                        value={user.interns?.[0]?.status || "active"}
+                        value={user.intern?.status || "active"}
                         onChange={(e) => handleStatusChange(user, e.target.value)}
                         className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer appearance-none ${
-                          user.interns?.[0]?.status === "inactive"
+                          user.intern?.status === "inactive"
                             ? "bg-red-100 text-red-700"
-                            : user.interns?.[0]?.status === "confirmed"
+                            : user.intern?.status === "confirmed"
                             ? "bg-indigo-100 text-indigo-700"
                             : "bg-emerald-100 text-emerald-700"
                         }`}

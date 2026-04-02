@@ -46,14 +46,17 @@ export async function GET(req: NextRequest) {
       filters.push(`{_or: [
         {name: {_ilike: "%${searchFilter}%"}},
         {email: {_ilike: "%${searchFilter}%"}},
-        {interns: {college: {_ilike: "%${searchFilter}%"}}}
+        {intern: {college: {_ilike: "%${searchFilter}%"}}}
       ]}`);
     }
 
     const whereClause = filters.length > 0 ? `where: {_and: [${filters.join(", ")}]}` : "";
+    const queryArgs = [];
+    if (whereClause) queryArgs.push(whereClause);
+    queryArgs.push("order_by: {created_at: desc}");
 
     const query = `query {
-      users(${whereClause}, order_by: {created_at: desc}) {
+      users(${queryArgs.join(", ")}) {
         id
         name
         email
@@ -61,7 +64,10 @@ export async function GET(req: NextRequest) {
         gender
         contact_number
         department_id
-        interns {
+        department {
+          name
+        }
+        intern {
           college
           joining_date
           status

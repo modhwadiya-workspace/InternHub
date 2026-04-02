@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { gql } from "@/lib/hasura";
+import { gql, gqlAdmin } from "@/lib/hasura";
 import { validateTaskCreation } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
           created_at
           group_id
           completed_at
-          created_by_user {
+          userByCreatedBy {
             name
           }
         }
@@ -45,12 +45,12 @@ export async function GET(req: NextRequest) {
           created_at
           group_id
           completed_at
-          assigned_to_user {
+          user {
             id
             name
             email
           }
-          created_by_user {
+          userByCreatedBy {
             name
           }
         }
@@ -58,7 +58,19 @@ export async function GET(req: NextRequest) {
     }
 
     const res = await gql(query, variables, session.hasuraToken as string);
-    return NextResponse.json({ tasks: res.data?.tasks || [] });
+    if (res.errors) {
+      console.error("GET /api/tasks GraphQL Errors:", JSON.stringify(res.errors, null, 2));
+      return NextResponse.json({ tasks: [] });
+    }
+
+    // Map Hasura relationship names to the format the frontend expects
+    const tasks = (res.data?.tasks || []).map((task: any) => ({
+      ...task,
+      assigned_to_user: task.user || null,
+      created_by_user: task.userByCreatedBy || null
+    }));
+
+    return NextResponse.json({ tasks });
   } catch (err) {
     console.error("GET /api/tasks Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -285,8 +297,9 @@ export async function DELETE(req: NextRequest) {
       variables = { id };
     }
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
     if (res.errors) {
+      console.error("DELETE /api/tasks GraphQL Errors:", res.errors);
       return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
     }
 

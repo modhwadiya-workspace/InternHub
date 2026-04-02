@@ -190,7 +190,7 @@ export async function PUT(request: Request) {
         announcements(where: {id: {_eq: $id}}) {
           created_by
         }
-      }`, { id });
+      }`, { id }, session.hasuraToken as string);
 
       const ann = checkRes.data?.announcements?.[0];
       if (!ann || ann.created_by !== user_id) {
@@ -206,7 +206,7 @@ export async function PUT(request: Request) {
       }
     }`;
 
-    const res = await gql(mutation, { id, title, message });
+    const res = await gql(mutation, { id, title, message }, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GraphQL errors updating announcement:", res.errors);
@@ -246,7 +246,7 @@ export async function DELETE(request: Request) {
         announcements(where: {id: {_eq: $id}}) {
           created_by
         }
-      }`, { id });
+      }`, { id }, session.hasuraToken as string);
 
       const ann = checkRes.data?.announcements?.[0];
       if (!ann || ann.created_by !== user_id) {
@@ -260,7 +260,7 @@ export async function DELETE(request: Request) {
       }
     }`;
 
-    const res = await gql(mutation, { id });
+    const res = await gql(mutation, { id }, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GraphQL errors deleting announcement:", res.errors);

@@ -1,4 +1,4 @@
-import { gql, metadata } from "./hasura";
+import { gqlAdmin, metadata } from "./hasura";
 import bcrypt from "bcryptjs";
 
 export async function ensureAdminExists() {
@@ -70,7 +70,7 @@ export async function ensureAdminExists() {
       }
     `;
 
-    const adminCheckRes = await gql(checkAdminQuery);
+    const adminCheckRes = await gqlAdmin(checkAdminQuery);
     if (adminCheckRes?.errors) {
       console.error("❌ Error checking for admin:", adminCheckRes.errors);
       return;
@@ -98,7 +98,7 @@ export async function ensureAdminExists() {
       }
     `;
 
-    const createAdminRes = await gql(createAdminMutation, {
+    const createAdminRes = await gqlAdmin(createAdminMutation, {
       name: ADMIN_NAME,
       email: ADMIN_EMAIL,
       password: hashedPassword,
