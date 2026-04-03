@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS public.interns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE,
     college TEXT NOT NULL,
-    contact_number TEXT UNIQUE NOT NULL,
     joining_date DATE,
     status TEXT NOT NULL,
     date_of_birth DATE,

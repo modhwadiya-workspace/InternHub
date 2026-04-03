@@ -51,7 +51,6 @@ CREATE TABLE public.interns (
     college TEXT NOT NULL,
     joining_date DATE,
     status TEXT NOT NULL, -- 'active', 'onboarding', 'completed'
-    contact_number TEXT UNIQUE,
     date_of_birth DATE,
     degree TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),

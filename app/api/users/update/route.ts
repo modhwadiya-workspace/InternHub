@@ -91,10 +91,6 @@ export async function POST(req: NextRequest) {
         customSets.push(`degree: $degree`);
         variablesPayload.degree = degree;
       }
-      if (contact_number) {
-        customSets.push(`contact_number: $contact_number`);
-        variablesPayload.contact_number = contact_number;
-      }
 
       const queryVariables = Object.keys(variablesPayload).map(key => {
         if (key === 'user_id' || key === 'id') return `$${key}: uuid!`;

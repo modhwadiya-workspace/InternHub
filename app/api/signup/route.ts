@@ -82,7 +82,6 @@ export async function POST(req: NextRequest) {
         $joining_date: date,
         $date_of_birth: date,
         $degree: String,
-        $contact_number: String!,
         $status: String!
       ) {
         insert_interns_one(object: {
@@ -92,7 +91,6 @@ export async function POST(req: NextRequest) {
           joining_date: $joining_date,
           date_of_birth: $date_of_birth,
           degree: $degree,
-          contact_number: $contact_number,
           status: $status
         }) {
           id
@@ -106,7 +104,6 @@ export async function POST(req: NextRequest) {
         joining_date: joining_date || new Date().toISOString().split('T')[0],
         date_of_birth: date_of_birth || null,
         degree: degree || null,
-        contact_number: contact_number,
         status: "active",
       };
 

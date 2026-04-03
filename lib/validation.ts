@@ -15,9 +15,6 @@ export function friendlyDbError(rawMessage: string): string {
         if (msg.includes("users_contact_number_key") || msg.includes("contact_number")) {
             return "This contact number is already in use. Please use a different number.";
         }
-        if (msg.includes("interns_contact_number_key")) {
-            return "This contact number is already assigned to another intern. Please use a different number.";
-        }
         return "A record with this information already exists. Please check for duplicates.";
     }
     if (msg.includes("foreign key") || msg.includes("not-null")) {
