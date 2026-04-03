@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface User { name: string; }
 interface Announcement {
@@ -9,10 +10,21 @@ interface Announcement {
   department_id: number | null; created_at: string; user: User;
 }
 
-export default function AnnouncementList({ refreshTrigger }: { refreshTrigger: number }) {
+interface AnnouncementListProps {
+  refreshTrigger: number;
+  onEdit?: (announcement: Announcement) => void;
+  onDelete?: (id: string) => void;
+}
+
+export default function AnnouncementList({ refreshTrigger, onEdit, onDelete }: AnnouncementListProps) {
+  const { data: session } = useSession();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const userRole = session?.user?.role;
+  const userId = (session?.user as any)?.id;
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -70,15 +82,62 @@ export default function AnnouncementList({ refreshTrigger }: { refreshTrigger: n
     manager: "badge-amber",
   };
 
+  const canEdit = (ann: Announcement) => {
+    if (userRole === "admin") return true;
+    if ((userRole === "admin" || userRole === "manager") && ann.created_by === userId) return true;
+    return false;
+  };
+
   return (
     <div className="space-y-4">
       {announcements.map((ann) => (
         <div key={ann.id} className="card p-5 hover:shadow-md transition-shadow duration-200">
           <div className="flex items-start justify-between gap-4 mb-3">
             <h3 className="text-base font-semibold text-slate-900 leading-snug">{ann.title}</h3>
-            <span className="badge badge-slate flex-shrink-0 mt-0.5">
-              {new Date(ann.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-            </span>
+            <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              {canEdit(ann) && onEdit && (
+                <button
+                  onClick={() => onEdit(ann)}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  title="Edit announcement"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {canEdit(ann) && onDelete && (
+                deletingId === ann.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { onDelete(ann.id); setDeletingId(null); }}
+                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setDeletingId(null)}
+                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeletingId(ann.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete announcement"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )
+              )}
+              <span className="badge badge-slate">
+                {new Date(ann.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+            </div>
           </div>
 
           <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-4">{ann.message}</p>

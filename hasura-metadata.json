@@ -2,24 +2,6 @@
   "version": 3,
   "sources": [
     {
-      "name": "default",
-      "kind": "postgres",
-      "tables": [],
-      "configuration": {
-        "connection_info": {
-          "database_url": "postgres://postgres:postgres@postgres:5432/internhub",
-          "isolation_level": "read-committed",
-          "pool_settings": {
-            "connection_lifetime": 600,
-            "idle_timeout": 180,
-            "max_connections": 50,
-            "retries": 1
-          },
-          "use_prepared_statements": false
-        }
-      }
-    },
-    {
       "name": "Internhub",
       "kind": "postgres",
       "tables": [
@@ -106,18 +88,6 @@
               "using": {
                 "foreign_key_constraint_on": "department_id"
               }
-            },
-            {
-              "name": "intern",
-              "using": {
-                "foreign_key_constraint_on": {
-                  "column": "user_id",
-                  "table": {
-                    "name": "interns",
-                    "schema": "public"
-                  }
-                }
-              }
             }
           ],
           "array_relationships": [
@@ -128,6 +98,18 @@
                   "column": "created_by",
                   "table": {
                     "name": "announcements",
+                    "schema": "public"
+                  }
+                }
+              }
+            },
+            {
+              "name": "interns",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "column": "user_id",
+                  "table": {
+                    "name": "interns",
                     "schema": "public"
                   }
                 }

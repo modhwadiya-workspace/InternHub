@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { gql } from "@/lib/hasura";
-import { validateUserUpdate } from "@/lib/validation";
+import { validateUserUpdate, friendlyDbError } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const checkQuery = `query { users_by_pk(id: "${userId}") { role department_id } }`;
-    const checkRes = await gql(checkQuery);
+    const checkRes = await gql(checkQuery, {}, session.hasuraToken as string);
     const targetUser = checkRes.data?.users_by_pk;
 
     if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -58,10 +58,10 @@ export async function POST(req: NextRequest) {
       contact_number: contact_number ?? null,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
 
     if (res.errors) {
-      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0]?.message || "Failed to update profile") }, { status: 500 });
     }
 
     if (targetUser.role === "intern") {
@@ -91,10 +91,6 @@ export async function POST(req: NextRequest) {
         customSets.push(`degree: $degree`);
         variablesPayload.degree = degree;
       }
-      if (contact_number) {
-        customSets.push(`contact_number: $contact_number`);
-        variablesPayload.contact_number = contact_number;
-      }
 
       const queryVariables = Object.keys(variablesPayload).map(key => {
         if (key === 'user_id' || key === 'id') return `$${key}: uuid!`;
@@ -108,7 +104,7 @@ export async function POST(req: NextRequest) {
         }
       }`;
 
-      await gql(internMutation, variablesPayload);
+      await gql(internMutation, variablesPayload, session.hasuraToken as string);
     }
 
     return NextResponse.json({ success: true, user: res.data?.update_users_by_pk });

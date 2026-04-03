@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gqlAdmin } from "@/lib/hasura";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { validateUserRegistration } from "@/lib/validation";
+import { validateUserRegistration, friendlyDbError } from "@/lib/validation";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { sendSignupWelcomeEmail } from "@/lib/welcome-email";
@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
       gender: gender || null,
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gqlAdmin(mutation, variables);
 
     if (res.errors) {
-      return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 400 });
     }
 
     const userId = res.data?.insert_users_one?.id;
@@ -82,7 +82,6 @@ export async function POST(req: NextRequest) {
         $joining_date: date,
         $date_of_birth: date,
         $degree: String,
-        $contact_number: String!,
         $status: String!
       ) {
         insert_interns_one(object: {
@@ -92,7 +91,6 @@ export async function POST(req: NextRequest) {
           joining_date: $joining_date,
           date_of_birth: $date_of_birth,
           degree: $degree,
-          contact_number: $contact_number,
           status: $status
         }) {
           id
@@ -106,15 +104,14 @@ export async function POST(req: NextRequest) {
         joining_date: joining_date || new Date().toISOString().split('T')[0],
         date_of_birth: date_of_birth || null,
         degree: degree || null,
-        contact_number: contact_number,
         status: "active",
       };
 
-      const internRes = await gql(internMutation, internVariables);
+      const internRes = await gqlAdmin(internMutation, internVariables);
 
       if (internRes.errors) {
         console.error("Intern Insert Error:", internRes.errors);
-        return NextResponse.json({ error: `User created but intern details failed: ${internRes.errors[0].message}` }, { status: 500 });
+        return NextResponse.json({ error: friendlyDbError(internRes.errors[0].message) }, { status: 500 });
       }
     }
 

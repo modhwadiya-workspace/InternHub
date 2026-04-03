@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gqlAdmin } from "@/lib/hasura";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         id
       }
     }`;
-    const otpRes = await gql(otpQuery, { email, otp });
+    const otpRes = await gqlAdmin(otpQuery, { email, otp });
 
     if (otpRes.errors) {
        console.error("OTP Verification Error:", otpRes.errors);

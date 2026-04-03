@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { gql } from "@/lib/hasura";
+import { gql, gqlAdmin } from "@/lib/hasura";
 import { validateTaskCreation } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
           created_at
           group_id
           completed_at
-          created_by_user {
+          userByCreatedBy {
             name
           }
         }
@@ -45,20 +45,32 @@ export async function GET(req: NextRequest) {
           created_at
           group_id
           completed_at
-          assigned_to_user {
+          user {
             id
             name
             email
           }
-          created_by_user {
+          userByCreatedBy {
             name
           }
         }
       }`;
     }
 
-    const res = await gql(query, variables);
-    return NextResponse.json({ tasks: res.data?.tasks || [] });
+    const res = await gql(query, variables, session.hasuraToken as string);
+    if (res.errors) {
+      console.error("GET /api/tasks GraphQL Errors:", JSON.stringify(res.errors, null, 2));
+      return NextResponse.json({ tasks: [] });
+    }
+
+    // Map Hasura relationship names to the format the frontend expects
+    const tasks = (res.data?.tasks || []).map((task: any) => ({
+      ...task,
+      assigned_to_user: task.user || null,
+      created_by_user: task.userByCreatedBy || null
+    }));
+
+    return NextResponse.json({ tasks });
   } catch (err) {
     console.error("GET /api/tasks Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -104,7 +116,7 @@ export async function POST(req: NextRequest) {
       }
     }`;
 
-    const res = await gql(mutation, { objects: taskObjects });
+    const res = await gql(mutation, { objects: taskObjects }, session.hasuraToken as string);
     if (res.errors) return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
 
     return NextResponse.json({ 
@@ -141,7 +153,7 @@ export async function PATCH(req: NextRequest) {
           id
        }
     }`;
-    const checkRes = await gql(checkQuery, { taskId: id, userId: session.user.id });
+    const checkRes = await gql(checkQuery, { taskId: id, userId: session.user.id }, session.hasuraToken as string);
     if (!checkRes.data?.tasks?.length) {
        return NextResponse.json({ error: "Unauthorized access to this task (must be assigned to you)" }, { status: 403 });
     }
@@ -160,7 +172,7 @@ export async function PATCH(req: NextRequest) {
       completed_at: status === "completed" ? new Date().toISOString() : null
     };
 
-    const res = await gql(mutation, variables);
+    const res = await gql(mutation, variables, session.hasuraToken as string);
     if (res.errors) return NextResponse.json({ error: res.errors[0].message }, { status: 400 });
 
     return NextResponse.json({ success: true, task: res.data.update_tasks_by_pk });
@@ -197,7 +209,7 @@ export async function PUT(req: NextRequest) {
        ? `query($group_id: uuid!) { tasks(where: {group_id: {_eq: $group_id}}) { id assigned_to } }`
        : `query($id: uuid!) { tasks(where: {id: {_eq: $id}}) { id assigned_to } }`;
     
-    const currentRes = await gql(fetchQuery, finalGroupId ? { group_id: finalGroupId } : { id });
+    const currentRes = await gql(fetchQuery, finalGroupId ? { group_id: finalGroupId } : { id }, session.hasuraToken as string);
     const currentAssignments = currentRes.data?.tasks || [];
     const currentInternIds = currentAssignments.map((a: any) => a.assigned_to);
 
@@ -213,7 +225,7 @@ export async function PUT(req: NextRequest) {
           update_tasks(where: {id: {_in: $ids}}, _set: $set) { affected_rows }
        }`;
        const updateIds = currentAssignments.filter((a: any) => toUpdate.includes(a.assigned_to)).map((a: any) => a.id);
-       await gql(updateMutation, { ids: updateIds, set: { title, description, priority, due_date, group_id: finalGroupId } });
+       await gql(updateMutation, { ids: updateIds, set: { title, description, priority, due_date, group_id: finalGroupId } }, session.hasuraToken as string);
     }
 
     // Remove old ones
@@ -222,7 +234,7 @@ export async function PUT(req: NextRequest) {
           delete_tasks(where: {id: {_in: $ids}}) { affected_rows }
        }`;
        const deleteIds = currentAssignments.filter((a: any) => toRemove.includes(a.assigned_to)).map((a: any) => a.id);
-       await gql(deleteMutation, { ids: deleteIds });
+       await gql(deleteMutation, { ids: deleteIds }, session.hasuraToken as string);
     }
 
     // Add new ones
@@ -236,12 +248,64 @@ export async function PUT(req: NextRequest) {
           created_by: session.user.id,
           group_id: finalGroupId
        }));
-       await gql(insertMutation, { objects: newTasks });
+       await gql(insertMutation, { objects: newTasks }, session.hasuraToken as string);
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("PUT /api/tasks Error:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Only Admin/Manager can delete tasks
+    if (session.user.role === "intern") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const group_id = searchParams.get("group_id");
+
+    if (!id && !group_id) {
+      return NextResponse.json({ error: "Task ID or Group ID is required." }, { status: 400 });
+    }
+
+    let mutation: string;
+    let variables: any;
+
+    if (group_id) {
+      // Delete all tasks in a group
+      mutation = `mutation ($group_id: uuid!) {
+        delete_tasks(where: {group_id: {_eq: $group_id}}) {
+          affected_rows
+        }
+      }`;
+      variables = { group_id };
+    } else {
+      // Delete a single task
+      mutation = `mutation ($id: uuid!) {
+        delete_tasks_by_pk(id: $id) {
+          id
+        }
+      }`;
+      variables = { id };
+    }
+
+    const res = await gql(mutation, variables, session.hasuraToken as string);
+    if (res.errors) {
+      console.error("DELETE /api/tasks GraphQL Errors:", res.errors);
+      return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/tasks Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

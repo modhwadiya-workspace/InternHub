@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (session.user.role === "manager") {
       // Before deleting, verify the user is an intern AND belongs to the manager's department
       const checkQuery = `query { users_by_pk(id: "${id}") { role department_id } }`;
-      const checkRes = await gql(checkQuery);
+      const checkRes = await gql(checkQuery, {}, session.hasuraToken as string);
       const targetUser = checkRes.data?.users_by_pk;
 
       if (!targetUser || targetUser.role !== "intern" || targetUser.department_id !== session.user.department_id) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const mutation = `mutation { delete_users_by_pk(id: "${id}") { id } }`;
-    const res = await gql(mutation);
+    const res = await gql(mutation, {}, session.hasuraToken as string);
 
     if (res.errors) {
       return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gqlAdmin } from "@/lib/hasura";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         id
       }
     }`;
-    const otpRes = await gql(otpQuery, { email, otp });
+    const otpRes = await gqlAdmin(otpQuery, { email, otp });
 
     if (!otpRes.data?.password_reset_otps?.length) {
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         affected_rows
       }
     }`;
-    const updateRes = await gql(updateMutation, { email, hashedPassword });
+    const updateRes = await gqlAdmin(updateMutation, { email, hashedPassword });
 
     if (updateRes.errors) {
        console.error("Password Reset Error:", updateRes.errors);
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         affected_rows
       }
     }`;
-    await gql(deleteMutation, { email });
+    await gqlAdmin(deleteMutation, { email });
 
     return NextResponse.json({ success: true, message: "Password reset successfully" });
   } catch (err) {

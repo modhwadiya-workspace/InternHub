@@ -27,11 +27,13 @@ interface TaskListProps {
   onUpdate: () => void;
   onViewDetails: (tasks: Task[]) => void;
   onEdit: (task: Task, groupTasks?: Task[]) => void;
+  onDelete?: (id: string, groupId?: string) => void;
 }
 
-export default function TaskList({ tasks, onUpdate, onViewDetails, onEdit }: TaskListProps) {
+export default function TaskList({ tasks, onUpdate, onViewDetails, onEdit, onDelete }: TaskListProps) {
   const { data: session } = useSession();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleUpdateStatus = async (id: string, status: string) => {
     setUpdatingId(id);
@@ -181,6 +183,32 @@ export default function TaskList({ tasks, onUpdate, onViewDetails, onEdit }: Tas
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   </button>
+                )}
+                {isAdmin && onDelete && (
+                  deletingId === task.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => { onDelete(task.id, isGroup ? task.group_id : undefined); setDeletingId(null); }}
+                        className="h-10 px-3 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(null)}
+                        className="h-10 px-3 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-xl hover:bg-slate-200 transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setDeletingId(task.id)}
+                      className="h-10 w-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                      title="Delete Task"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  )
                 )}
 
                 {isAdmin && isGroup && (

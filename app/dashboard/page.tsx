@@ -56,7 +56,7 @@ export default async function Dashboard() {
     departments: departments_aggregate { aggregate { count } }
     managers: users_aggregate(where: {role: {_eq: "manager"}}) { aggregate { count } }
   }`;
-  const res = await gql(query);
+  const res = await gql(query, {}, session.hasuraToken as string);
   const internCount = res.data?.interns?.aggregate?.count || 0;
   const deptCount = res.data?.departments?.aggregate?.count || 0;
   const managerCount = res.data?.managers?.aggregate?.count || 0;

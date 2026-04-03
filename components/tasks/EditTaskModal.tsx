@@ -24,6 +24,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task, allInt
   const [interns, setInterns] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // Form State
   const [formData, setFormData] = useState({
@@ -212,6 +213,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task, allInt
                    </div>
                    <input
                      type="date"
+                     min={todayStr}
                      className="input-field !pl-12"
                      value={formData.due_date}
                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}

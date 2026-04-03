@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { gql } from "@/lib/hasura";
 import bcrypt from "bcryptjs";
+import { friendlyDbError } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,14 +46,17 @@ export async function GET(req: NextRequest) {
       filters.push(`{_or: [
         {name: {_ilike: "%${searchFilter}%"}},
         {email: {_ilike: "%${searchFilter}%"}},
-        {interns: {college: {_ilike: "%${searchFilter}%"}}}
+        {intern: {college: {_ilike: "%${searchFilter}%"}}}
       ]}`);
     }
 
     const whereClause = filters.length > 0 ? `where: {_and: [${filters.join(", ")}]}` : "";
+    const queryArgs = [];
+    if (whereClause) queryArgs.push(whereClause);
+    queryArgs.push("order_by: {created_at: desc}");
 
     const query = `query {
-      users(${whereClause}, order_by: {created_at: desc}) {
+      users(${queryArgs.join(", ")}) {
         id
         name
         email
@@ -60,7 +64,10 @@ export async function GET(req: NextRequest) {
         gender
         contact_number
         department_id
-        interns {
+        department {
+          name
+        }
+        intern {
           college
           joining_date
           status
@@ -68,7 +75,7 @@ export async function GET(req: NextRequest) {
       }
     }`;
 
-    const res = await gql(query);
+    const res = await gql(query, {}, session.hasuraToken as string);
 
     if (res.errors) {
       console.error("GET /api/users GraphQL Errors:", res.errors);
@@ -108,10 +115,10 @@ export async function POST(req: Request) {
       }
     `;
 
-    const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword });
+    const res = await gql(mutation, { name, email, role, department_id, gender, password: hashedPassword }, session.hasuraToken as string);
 
     if (res.errors) {
-      return NextResponse.json({ error: res.errors[0].message }, { status: 500 });
+      return NextResponse.json({ error: friendlyDbError(res.errors[0].message) }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, user: res.data.insert_users_one });

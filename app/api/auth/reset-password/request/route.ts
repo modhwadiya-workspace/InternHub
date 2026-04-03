@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gql, metadata } from "@/lib/hasura";
+import { gqlAdmin, metadata } from "@/lib/hasura";
 import { generateOTP, sendOTPMock } from "@/lib/otp";
 
 export async function POST(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         id
       }
     }`;
-    const userRes = await gql(userQuery, { email });
+    const userRes = await gqlAdmin(userQuery, { email });
     if (!userRes.data?.users?.length) {
       return NextResponse.json({ error: "User with this email does not exist" }, { status: 404 });
     }
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         id
       }
     }`;
-    const insertRes = await gql(insertMutation, { email, otp, expiry });
+    const insertRes = await gqlAdmin(insertMutation, { email, otp, expiry });
 
     if (insertRes.errors) {
       console.error("OTP Insert Error:", insertRes.errors);

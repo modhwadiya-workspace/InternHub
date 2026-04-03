@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { gql } from "@/lib/hasura";
+import { gqlAdmin } from "@/lib/hasura";
 
 export async function GET() {
   try {
     const query = `query { departments(order_by: {id: asc}) { id name } }`;
-    const res = await gql(query);
+    const res = await gqlAdmin(query);
 
     if (res.errors) {
       return NextResponse.json({ error: "Failed to fetch departments" }, { status: 500 });

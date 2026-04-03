@@ -43,7 +43,7 @@ SCHEMA_CONTEXT = """You are a SQL expert for an internship management system.
 Database Tables:
 1. departments - id (SERIAL PK), name (TEXT), created_at (TIMESTAMP)
 2. users - id (UUID PK), name (TEXT), email (TEXT), password (TEXT), role (TEXT like 'admin','manager','user'), department_id (INT FK), created_at (TIMESTAMP), gender (TEXT), contact_number (TEXT)
-3. interns - id (UUID PK), user_id (UUID FK to users), college (TEXT), contact_number (TEXT), joining_date (DATE), status (TEXT), date_of_birth (DATE), degree (TEXT), created_at (TIMESTAMP)
+3. interns - id (UUID PK), user_id (UUID FK to users), college (TEXT), joining_date (DATE), status (TEXT), date_of_birth (DATE), degree (TEXT), created_at (TIMESTAMP)
 4. announcements - id (UUID PK), title (TEXT), message (TEXT), created_by (UUID FK to users), created_by_role (TEXT), department_id (INT FK to departments), created_at (TIMESTAMP)
 
 Rules:
@@ -79,7 +79,7 @@ Q: "List all departments"
 A: SELECT name FROM public.departments ORDER BY name;
 
 Q: "Show active interns"
-A: SELECT u.name, u.email, i.college, i.joining_date, i.status 
+A: SELECT u.name, u.email, u.contact_number, i.college, i.joining_date, i.status 
    FROM public.interns i 
    JOIN public.users u ON i.user_id = u.id 
    WHERE i.status = 'active';

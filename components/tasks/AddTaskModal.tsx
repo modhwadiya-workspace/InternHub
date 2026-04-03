@@ -27,6 +27,7 @@ export default function AddTaskModal({ isOpen, onClose, onSuccess }: AddTaskModa
     due_date: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const todayStr = new Date().toISOString().split("T")[0];
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -288,6 +289,7 @@ export default function AddTaskModal({ isOpen, onClose, onSuccess }: AddTaskModa
                 </div>
                 <input
                   type="date"
+                  min={todayStr}
                   className="input-field input-with-icon"
                   value={formData.due_date}
                   onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
