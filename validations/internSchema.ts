@@ -2,6 +2,7 @@ import * as Yup from "yup";
 
 export const internSchema = Yup.object().shape({
   name: Yup.string()
+    .matches(/^[a-zA-Z\s]+$/, "Name can only contain letters and spaces")
     .min(2, "Name must be at least 2 characters")
     .required("Please enter the intern's full name"),
   email: Yup.string()
