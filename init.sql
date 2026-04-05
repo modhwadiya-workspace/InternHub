@@ -1,6 +1,10 @@
 -- Enable UUID extension in internhub database
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- NOTE FOR AI/analytics integrations:
+-- `public.users.password` stores a password hash and must never be exposed.
+-- `public.password_reset_otps` is operational security data and must never be queried by chat/reporting features.
+
 -- 1. Departments Table
 CREATE TABLE IF NOT EXISTS public.departments (
     id SERIAL PRIMARY KEY,
@@ -13,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
+    password TEXT NOT NULL, -- stores hashed password values only
     role TEXT NOT NULL,
     department_id INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -107,3 +111,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
+
+-- Normalize schema: contact number should only live in users table
+ALTER TABLE public.interns
+DROP COLUMN IF EXISTS contact_number;

@@ -7,10 +7,33 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: internhub
       POSTGRES_INITDB_ARGS: "-A md5"
+
+  db-bootstrap:
+    image: postgres:15
+    restart: "no"
+    depends_on:
+      - postgres
+    volumes:
+      - ./init.sql:/sql/init.sql:ro
+      - ./seed.sql:/sql/seed.sql:ro
+    environment:
+      PGPASSWORD: postgres
+    command: >
+      sh -c "
+        set -e;
+        until pg_isready -h postgres -p 5432 -U postgres; do
+          echo 'Waiting for postgres...';
+          sleep 2;
+        done;
+        psql -h postgres -U postgres -d internhub -v ON_ERROR_STOP=1 -f /sql/init.sql;
+        psql -h postgres -U postgres -d internhub -v ON_ERROR_STOP=1 -f /sql/seed.sql;
+        echo 'Database bootstrap complete.';
+      "
   graphql-engine:
     image: hasura/graphql-engine:v2.46.0
     ports:

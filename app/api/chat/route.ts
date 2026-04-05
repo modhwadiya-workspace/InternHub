@@ -16,18 +16,29 @@ interface ChatResponse {
   error?: string;
 }
 
-// Sensitive fields that should never be exposed to users
+// Sensitive fields that should NEVER be exposed to users
+// Even if LLM generates them in SELECT, we filter them out as defense-in-depth
 const SENSITIVE_FIELDS = [
+  // Core IDs - never expose
   "id",
-  "password",
   "user_id",
-  "date_of_birth",
+  "department_id",
+  "group_id",
   "created_by",
+  "assigned_to",
+  // Security data - critical
+  "password",
+  // Privacy data
+  "date_of_birth",
+  // Operational security
+  "otp",
+  "expiry",
 ];
 
 /**
- * Remove sensitive fields from query results
- * Even if LLM includes them, we filter them out before returning to frontend
+  * Remove sensitive fields from query results (defense-in-depth filtering)
+  * Even if LLM generates SELECT with sensitive columns, we strip them before returning to admin.
+  * This layer is in addition to SQL validation in backend.
  */
 function filterSensitiveFields(
   results: Array<Record<string, any>>
@@ -39,7 +50,7 @@ function filterSensitiveFields(
   return results.map((row) => {
     const filtered: Record<string, any> = {};
     Object.keys(row).forEach((key) => {
-      // Check if key matches any sensitive field (case-insensitive)
+      // Check if key matches any sensitive field (case-insensitive, with _id suffix matching)
       const lowerKey = key.toLowerCase();
       const isSensitive = SENSITIVE_FIELDS.some(
         (field) => lowerKey === field || lowerKey.endsWith("_" + field)
@@ -53,6 +64,16 @@ function filterSensitiveFields(
   });
 }
 
+/**
+ * Admin Chat API
+ * 
+ * This endpoint allows admins to query the internship management system via natural language.
+ * Security measures:
+ * - Admin-only access (verified via NextAuth)
+ * - SQL validation in backend (prevents password_reset_otps queries)
+ * - Sensitive field filtering (defense-in-depth)
+ * - All passwords, IDs, and private data are stripped before returning to admin
+ */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Get session and verify admin role

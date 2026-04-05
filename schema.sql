@@ -1,6 +1,7 @@
 -- ──────────────────────────────────────────────────────────
 -- InternHub Database Schema
 -- One-click initialization script for PostgreSQL
+-- only for development and testing purposes. Not for production use.
 -- ──────────────────────────────────────────────────────────
 
 -- Enable UUID extension

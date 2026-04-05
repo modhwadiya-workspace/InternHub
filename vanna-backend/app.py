@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import os
 from dotenv import load_dotenv
 import logging
@@ -38,79 +38,136 @@ else:
     logger.info("✅ GROQ_API_KEY loaded")
 
 # Database schema information
-SCHEMA_CONTEXT = """You are a SQL expert for an internship management system.
+SCHEMA_CONTEXT = """You are a SQL expert for InternHub. This chat interface is ADMIN-ONLY.
 
-Database Tables:
-1. departments - id (SERIAL PK), name (TEXT), created_at (TIMESTAMP)
-2. users - id (UUID PK), name (TEXT), email (TEXT), password (TEXT), role (TEXT like 'admin','manager','user'), department_id (INT FK), created_at (TIMESTAMP), gender (TEXT), contact_number (TEXT)
-3. interns - id (UUID PK), user_id (UUID FK to users), college (TEXT), joining_date (DATE), status (TEXT), date_of_birth (DATE), degree (TEXT), created_at (TIMESTAMP)
-4. announcements - id (UUID PK), title (TEXT), message (TEXT), created_by (UUID FK to users), created_by_role (TEXT), department_id (INT FK to departments), created_at (TIMESTAMP)
+Use this PostgreSQL schema in public:
 
-Rules:
-- Use public schema prefix
-- Return only valid SQL, no markdown
-- Use JOINs for related data
-- Add LIMIT when appropriate
-- Filter by active status where relevant
+1) departments
+- id SERIAL PRIMARY KEY
+- name TEXT NOT NULL
+- created_at TIMESTAMP
 
-⚠️ IMPORTANT - Sensitive Fields Handling:
+2) users
+- id UUID PRIMARY KEY
+- name TEXT NOT NULL
+- email TEXT UNIQUE NOT NULL
+- password TEXT NOT NULL (hashed; never expose)
+- role TEXT NOT NULL ('admin', 'manager', 'intern')
+- department_id INTEGER FK -> departments.id
+- created_at TIMESTAMPTZ
+- gender TEXT
+- contact_number TEXT UNIQUE
 
-DO USE IN WHERE/JOIN CLAUSES (filtering and relationships):
-  - users.id (join with interns, announcements)
-  - interns.user_id (join interns with users)
-  - announcements.created_by (join to get creator info)
-  - departments.id (join for department names)
+3) interns
+- id UUID PRIMARY KEY
+- user_id UUID UNIQUE FK -> users.id
+- college TEXT NOT NULL
+- joining_date DATE
+- status TEXT NOT NULL
+- date_of_birth DATE (private; never expose)
+- degree TEXT
+- created_at TIMESTAMPTZ
 
-NEVER SELECT IN RESULTS:
-  - users.password (security - never expose)
-  - interns.date_of_birth (privacy)
-  - id columns: users.id, interns.id, departments.id, announcements.id
-  - interns.user_id (redundant if user info shown)
-  - announcements.created_by (show creator name instead via JOIN)
+4) announcements
+- id UUID PRIMARY KEY
+- title TEXT NOT NULL
+- message TEXT NOT NULL
+- created_by UUID FK -> users.id
+- created_by_role TEXT NOT NULL
+- department_id INTEGER FK -> departments.id
+- created_at TIMESTAMPTZ
 
-EXAMPLES OF CORRECT USAGE:
-- Show interns with departments: Use JOIN on departments.id but don't SELECT it
-- Get announcement creators: JOIN to users table and SELECT u.name, not a.created_by"""
+5) leaves
+- id UUID PRIMARY KEY
+- user_id UUID FK -> users.id
+- start_date DATE NOT NULL
+- end_date DATE NOT NULL
+- reason TEXT NOT NULL
+- leave_type TEXT NOT NULL
+- status TEXT NOT NULL DEFAULT 'pending'
+- created_at TIMESTAMPTZ
 
-# Training examples
-TRAINING_EXAMPLES = """Examples of CORRECT queries (no sensitive fields in SELECT):
+6) tasks
+- id UUID PRIMARY KEY
+- title TEXT NOT NULL
+- description TEXT
+- assigned_to UUID FK -> users.id
+- created_by UUID FK -> users.id
+- due_date DATE
+- status TEXT NOT NULL DEFAULT 'todo'
+- priority TEXT NOT NULL DEFAULT 'medium'
+- group_id UUID
+- completed_at TIMESTAMPTZ
+- created_at TIMESTAMPTZ
 
-Q: "List all departments" 
-A: SELECT name FROM public.departments ORDER BY name;
+7) password_reset_otps
+- security table, forbidden for this chat
 
-Q: "Show active interns"
-A: SELECT u.name, u.email, u.contact_number, i.college, i.joining_date, i.status 
-   FROM public.interns i 
-   JOIN public.users u ON i.user_id = u.id 
-   WHERE i.status = 'active';
+Strict generation rules:
+- Return exactly one valid PostgreSQL SELECT query, or INVALID_QUERY.
+- Use public.<table> names.
+- Use JOINs to show human-friendly values (names, emails, department names).
+- You may use IDs in JOIN/WHERE, but never select IDs in output.
+- Never select: password, date_of_birth, id, user_id, department_id, created_by, assigned_to, group_id, otp, expiry.
+- Never query password_reset_otps.
+- If the question is unclear/off-topic/security-related, return INVALID_QUERY.
+"""
 
-Q: "Interns with their department"
-A: SELECT u.name, u.email, i.college, i.status, d.name as department 
-   FROM public.interns i 
-   JOIN public.users u ON i.user_id = u.id 
-   LEFT JOIN public.departments d ON u.department_id = d.id;
+TRAINING_EXAMPLES = """Examples:
 
-Q: "Count interns by college"
-A: SELECT college, COUNT(*) as intern_count 
-   FROM public.interns 
-   GROUP BY college;
+Q: List all departments
+A: SELECT d.name
+    FROM public.departments d
+    ORDER BY d.name;
 
-Q: "Show managers"
-A: SELECT name, email, gender, contact_number 
-   FROM public.users 
-   WHERE role = 'manager';
+Q: Show active interns with department
+A: SELECT u.name, u.email, u.contact_number, i.college, i.joining_date, i.status, i.degree, d.name AS department
+    FROM public.interns i
+    JOIN public.users u ON i.user_id = u.id
+    LEFT JOIN public.departments d ON u.department_id = d.id
+    WHERE LOWER(i.status) = 'active'
+    ORDER BY u.name;
 
-Q: "Recent announcements"
-A: SELECT a.title, a.message, u.name as creator, u.email, a.created_at 
-   FROM public.announcements a 
-   JOIN public.users u ON a.created_by = u.id 
-   ORDER BY a.created_at DESC LIMIT 10;
+Q: Show all managers
+A: SELECT u.name, u.email, u.gender, u.contact_number, d.name AS department
+    FROM public.users u
+    LEFT JOIN public.departments d ON u.department_id = d.id
+    WHERE LOWER(u.role) = 'manager'
+    ORDER BY u.name;
 
-IMPORTANT RULES:
-- ONLY generate SQL if the question is clear and about: departments, users, interns, announcements, managers, admins, or employees
-- If the question is gibberish, random characters, or unclear: return "INVALID_QUERY"
-- If you cannot understand the question or it doesn't relate to the data: return "INVALID_QUERY"
-- Do NOT guess or make up interpretations for unclear questions"""
+Q: Recent announcements
+A: SELECT a.title, a.message, u.name AS creator_name, a.created_by_role, d.name AS department, a.created_at
+    FROM public.announcements a
+    JOIN public.users u ON a.created_by = u.id
+    LEFT JOIN public.departments d ON a.department_id = d.id
+    ORDER BY a.created_at DESC
+    LIMIT 20;
+
+Q: Pending leave requests
+A: SELECT u.name, u.email, l.start_date, l.end_date, l.leave_type, l.reason, l.status, l.created_at
+    FROM public.leaves l
+    JOIN public.users u ON l.user_id = u.id
+    WHERE LOWER(l.status) = 'pending'
+    ORDER BY l.created_at DESC;
+
+Q: Overdue high priority tasks
+A: SELECT t.title, t.description, assignee.name AS assigned_to_name, creator.name AS created_by_name, t.due_date, t.status, t.priority
+    FROM public.tasks t
+    JOIN public.users assignee ON t.assigned_to = assignee.id
+    JOIN public.users creator ON t.created_by = creator.id
+    WHERE LOWER(t.priority) = 'high'
+      AND t.due_date < CURRENT_DATE
+      AND LOWER(t.status) <> 'done'
+    ORDER BY t.due_date ASC;
+
+Q: Count interns by college
+A: SELECT i.college, COUNT(*) AS intern_count
+    FROM public.interns i
+    GROUP BY i.college
+    ORDER BY intern_count DESC;
+
+If question is unclear, unrelated, or asks for secret/security data: INVALID_QUERY
+"""
 
 app = FastAPI(title="Vanna AI Backend", version="1.0.0")
 
@@ -156,7 +213,7 @@ def is_gibberish(question: str) -> bool:
     
     # Check for common SQL/data keywords
     keywords = ["select", "show", "list", "get", "find", "where", "count", "total", 
-                "department", "intern", "user", "announcement", "manager", "active", 
+                "department", "intern", "user", "announcement", "manager", "active", "leave", "task",
                 "all", "recent", "by", "total", "many", "how many", "who", "what",
                 "when", "which", "top", "最新", "部", "用户", "实习"]
     
@@ -178,18 +235,54 @@ class QueryResponse(BaseModel):
     results: Optional[List[Dict[str, Any]]] = None
     error: Optional[str] = None
 
+def validate_sql_safety(sql: str) -> Tuple[bool, str]:
+    """Validate SQL doesn't access forbidden tables or columns"""
+    sql_upper = sql.upper()
+    
+    # Check for forbidden tables
+    forbidden_tables = ["password_reset_otps", "password_reset_otp"]
+    for table in forbidden_tables:
+        if table.upper() in sql_upper:
+            return False, f"Cannot query {table} - this is forbidden for security reasons"
+    
+    # Check for password column selection
+    if "PASSWORD" in sql_upper and "SELECT" in sql_upper:
+        # Allow password in WHERE clauses but not in SELECT
+        parts = sql_upper.split("SELECT")
+        if len(parts) > 1:
+            select_part = parts[1].split("FROM")[0] if "FROM" in parts[1] else parts[1]
+            if "PASSWORD" in select_part:
+                return False, "Cannot select password field - security policy"
+    
+    return True, ""
+
 def generate_sql_from_question(question: str) -> str:
     """Use Groq to generate SQL from natural language"""
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY not configured")
     
     try:
-        prompt = f"""{SCHEMA_CONTEXT}
+        system_prompt = """You generate safe PostgreSQL SELECT queries for InternHub admin analytics.
+
+    Output policy:
+    - Output only SQL or INVALID_QUERY.
+    - No markdown and no explanation.
+
+    Security policy:
+    - Never query password_reset_otps.
+    - Never select: password, date_of_birth, id, user_id, department_id, created_by, assigned_to, group_id, otp, expiry.
+    - IDs are allowed only for joins and filters.
+    - Prefer human-readable output columns (name, email, department, status, date).
+    """
+        
+        user_message = f"""{SCHEMA_CONTEXT}
 
 {TRAINING_EXAMPLES}
 
-Generate SQL for: {question}
-Return ONLY the SQL query, nothing else."""
+User Question: {question}
+
+GENERATE ONLY the SQL query. No markdown, no explanation, no additional text.
+If you cannot safely answer or the question is unclear: return "INVALID_QUERY" """
 
         # Call Groq API directly via httpx
         headers = {
@@ -200,10 +293,11 @@ Return ONLY the SQL query, nothing else."""
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": [
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
             ],
             "max_tokens": 500,
-            "temperature": 0.3  # Lower temperature for stricter responses
+            "temperature": 0.1  # Very low temperature for strict adherence to rules
         }
         
         with httpx.Client() as client:
@@ -238,6 +332,15 @@ Return ONLY the SQL query, nothing else."""
         
         query_logger.info(f"[SQL GENERATED] {sql}")
         logger.info(f"Generated SQL: {sql}")
+        
+        # Validate SQL safety
+        is_safe, safety_msg = validate_sql_safety(sql)
+        if not is_safe:
+            logger.warning(f"SQL validation failed: {safety_msg}")
+            query_logger.warning(f"[SECURITY_VIOLATION] {safety_msg}")
+            query_logger.warning(f"[REJECTED_SQL] {sql}")
+            return "INVALID_QUERY"
+        
         return sql
     except httpx.HTTPError as e:
         logger.error(f"Groq API error: {e}")
@@ -268,18 +371,18 @@ async def chat(request: QueryRequest):
         query_logger.info(f"[QUESTION] {question}")
         
         if not question:
-            error_msg = "Please ask a question about departments, interns, users, or announcements."
+            error_msg = "Please ask a question about departments, users, interns, announcements, leaves, or tasks."
             query_logger.info(f"[REJECTED] Empty question")
             return QueryResponse(
                 question=question,
                 sql=None,
                 results=None,
-                error="❌ Please ask a question about departments, interns, users, or announcements."
+                error="❌ Please ask a question about departments, users, interns, announcements, leaves, or tasks."
             )
 
         # Check for gibberish input
         if is_gibberish(question):
-            error_msg = "❌ Please refine your query. Ask about: departments, interns, users, or announcements. Example: 'Show all active interns' or 'List departments'"
+            error_msg = "❌ Please refine your query. Ask about: departments, users, interns, announcements, leaves, or tasks. Example: 'Show pending leaves' or 'List overdue tasks'."
             query_logger.warning(f"[GIBBERISH] {question}")
             query_logger.info(f"[RESPONSE] ERROR: {error_msg}\n")
             return QueryResponse(
@@ -367,7 +470,7 @@ async def chat(request: QueryRequest):
                     )
             
         except Exception as e:
-            error_msg = f"❌ Error executing query. Please try a different question."
+            error_msg = f"❌Error executing query. Please try a different question."
             logger.error(f"SQL execution error: {e}")
             query_logger.error(f"[EXECUTION_ERROR] {str(e)}")
             query_logger.info(f"[RESPONSE] ERROR: {error_msg}")
